@@ -326,7 +326,12 @@
 </div>
 
 <script>
-  const SYSTEM_PROMPT = `You are NoteBuddy, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise.`;
+  const SYSTEM_PROMPT = `You are NoteBuddy, a helpful assistant for school students.
+
+Rules:
+- Do NOT output code or programming examples.
+- If asked for code, explain in plain English instead.
+- Be clear, simple, and concise.`;
 
   const history = [];
   let isLoading = false;
@@ -365,23 +370,9 @@
   }
 
   function formatMessage(text) {
-    // Fix broken inline code blocks (IMPORTANT)
-    text = text.replace(/```(\w+)?\s+/g, "```$1\n");
-
-    return text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-      const language = lang || detectLanguage(code);
-      const escaped = escapeHtml(code.trim());
-
-      return `
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-lang">${language}</span>
-            <button class="copy-btn" onclick="copyCode(this)" aria-label="Copy">📋</button>
-          </div>
-          <pre><code class="language-${language}">${escaped}</code></pre>
-        </div>
-      `;
-    }).replace(/\n/g, "<br>");
+    text = text.replace(/```[\s\S]*?```/g, "⚠️ Code removed for simplicity");
+  
+    return text.replace(/\n/g, "<br>");
   }
 
   function addMessage(role, text, isThinking = false) {
