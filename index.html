@@ -5,318 +5,265 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NoteBuddy</title>
 
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
-
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
-
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-core.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/autoloader/prism-autoloader.min.js"></script>
 
-<script>
-Prism.plugins.autoloader.languages_path =
-  "https://cdn.jsdelivr.net/npm/prismjs/components/";
-</script>
-
 <style>
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+*{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --bg:#212121;
+  --panel:#0d0d0d;
+  --border:#1a1a1a;
+  --text:#ececf1;
+  --muted:#666;
+  --accent:#d4f570;
+  --radius:14px;
+  --mono:'DM Mono', monospace;
+  --display:'Syne', sans-serif;
 }
 
-:root {
-  --accent: #ffffff;
-  --accent-dim: rgba(200,240,96,0.1);
-  --text: #e8eaf0;
-  --muted: #555;
-  --border: #1a1a1a;
-  --radius: 14px;
-  --font-display: 'Syne', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  height:100vh;
+  display:flex;
+  overflow:hidden;
 }
 
-body {
-  background: #212121;
-  color: #ececf1;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+/* SIDEBAR */
+#sidebar{
+  width:260px;
+  background:#111;
+  border-right:1px solid var(--border);
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  transform:translateX(-100%);
+  transition:0.2s;
+  position:absolute;
+  height:100%;
+  z-index:10;
 }
 
-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  gap: 12px;
+#sidebar.open{
+  transform:translateX(0);
 }
 
-.logo-mark {
-  width: 30px;
-  height: 30px;
-  background: var(--accent);
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+.chat-item{
+  padding:10px;
+  background:#1a1a1a;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:12px;
 }
 
-.logo-mark svg {
-  width: 16px;
-  height: 16px;
+.chat-item:hover{
+  background:#222;
 }
 
-header h1 {
-  font-family: var(--font-display);
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--text);
+/* MAIN */
+main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  width:100%;
 }
 
-.header-tag {
-  margin-left: auto;
-  font-size: 10px;
-  color: var(--accent);
-  background: var(--accent-dim);
-  border: 1px solid rgba(200,240,96,0.2);
-  border-radius: 20px;
-  padding: 3px 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* HEADER */
+header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:14px;
+  border-bottom:1px solid var(--border);
 }
 
-#chat-window {
-  flex: 1;
-  overflow-y: auto;
-  padding: 28px 0;
-  scroll-behavior: smooth;
+.icon-btn{
+  width:34px;
+  height:34px;
+  background:#333;
+  border:none;
+  border-radius:8px;
+  cursor:pointer;
+  color:white;
 }
 
-.messages-inner {
-  max-width: 700px;
-  margin: 0 auto;
-  padding: 0 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+h1{
+  font-family:var(--display);
+  font-size:16px;
 }
 
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 340px;
-  gap: 8px;
-  text-align: center;
+/* CHAT */
+#chat{
+  flex:1;
+  overflow:auto;
+  padding:20px;
 }
 
-.empty-state h2 {
-  font-family: var(--font-display);
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+.msg{
+  margin:8px 0;
+  max-width:80%;
+  padding:10px 12px;
+  border-radius:12px;
+  font-size:13px;
+  line-height:1.5;
 }
 
-.empty-state p {
-  color: var(--muted);
-  font-size: 13px;
+.user{
+  margin-left:auto;
+  background:#0d0d0d;
+  border:1px solid #222;
 }
 
-.msg-row {
-  display: flex;
-  flex-direction: column;
-  animation: fadeUp 0.18s ease;
-  margin-bottom: 2px;
+.ai{
+  background:#111;
+  border:1px solid #1f1f1f;
 }
 
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: translateY(0); }
+/* INPUT */
+#inputBar{
+  display:flex;
+  padding:10px;
+  border-top:1px solid var(--border);
 }
 
-.msg-row.user { align-items: flex-end; margin-top: 14px; }
-.msg-row.ai { align-items: flex-start; margin-top: 4px; }
-
-.msg-label {
-  font-size: 10px;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  margin-bottom: 5px;
-  padding: 0 2px;
+textarea{
+  flex:1;
+  resize:none;
+  border:none;
+  background:#2a2a2a;
+  color:white;
+  padding:10px;
+  border-radius:10px;
+  outline:none;
 }
 
-.msg-label.user-label { color: rgba(200,240,96,0.4); }
-
-.bubble {
-  max-width: 88%;
-  padding: 11px 15px;
-  border-radius: var(--radius);
-  line-height: 1.8;
-  font-size: 13.5px;
-}
-
-.bubble.user {
-  background: #0d0d0d;
-  border: 1px solid #222;
-  border-bottom-right-radius: 4px;
-}
-
-.bubble.ai {
-  background: #0d0d0d;
-  border: 1px solid #1f1f1f;
-  border-radius: 14px;
-  padding: 11px 15px;
-}
-
-.input-area {
-  padding: 14px 20px 20px;
-  border-top: 1px solid var(--border);
-}
-
-.input-wrap {
-  max-width: 700px;
-  margin: 0 auto;
-  display: flex;
-  align-items: flex-end;
-  gap: 10px;
-  background: #303030;
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: var(--radius);
-  padding: 10px 10px 10px 16px;
-}
-
-#user-input {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 13.5px;
-  line-height: 1.6;
-  resize: none;
-}
-
-#send-btn {
-  width: 34px;
-  height: 34px;
-  background: var(--accent);
-  border: none;
-  border-radius: 9px;
-  cursor: pointer;
+button.send{
+  margin-left:10px;
+  width:40px;
+  border:none;
+  background:var(--accent);
+  border-radius:10px;
+  cursor:pointer;
 }
 </style>
 </head>
 
 <body>
 
+<!-- SIDEBAR -->
+<div id="sidebar"></div>
+
+<main>
+
 <header>
-  <div class="logo-mark">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-      <path d="M2 17l10 5 10-5"/>
-      <path d="M2 12l10 5 10-5"/>
-    </svg>
-  </div>
+  <button class="icon-btn" onclick="toggleSidebar()">☰</button>
   <h1>NoteBuddy</h1>
-  <span class="header-tag">Free</span>
 </header>
 
-<div id="chat-window">
-  <div class="messages-inner" id="messages">
-    <div class="empty-state" id="empty-state">
-      <h2>NoteBuddy</h2>
-      <p>Ask me any question</p>
-    </div>
-  </div>
+<div id="chat"></div>
+
+<div id="inputBar">
+  <textarea id="input" rows="1"></textarea>
+  <button class="send" onclick="send()">➤</button>
 </div>
 
-<div class="input-area">
-  <div class="input-wrap">
-    <textarea id="user-input" placeholder="Ask me any question" rows="1"></textarea>
-    <button id="send-btn" onclick="sendMessage()">
-      ➤
-    </button>
-  </div>
-</div>
+</main>
 
 <script>
-const SYSTEM_PROMPT = `You are NoteBuddy, a school assistant.`;
+let chats = JSON.parse(localStorage.getItem("chats") || "[]");
+let currentChat = [];
 
-const history = [];
-let isLoading = false;
+const chatEl = document.getElementById("chat");
+const sidebar = document.getElementById("sidebar");
+const input = document.getElementById("input");
 
-const messagesEl = document.getElementById('messages');
-const inputEl = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-const chatWindow = document.getElementById('chat-window');
-
-inputEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-function formatMessage(text) {
-  return marked.parse(text);
+/* SIDEBAR */
+function toggleSidebar(){
+  sidebar.classList.toggle("open");
+  renderSidebar();
 }
 
-function addMessage(role, text, isThinking = false) {
-  const row = document.createElement('div');
-  row.className = `msg-row ${role}`;
+function renderSidebar(){
+  sidebar.innerHTML = "";
 
-  const bubble = document.createElement('div');
-  bubble.className = `bubble ${role}`;
+  const newBtn = document.createElement("div");
+  newBtn.className = "chat-item";
+  newBtn.textContent = "+ New Chat";
+  newBtn.onclick = () => {
+    currentChat = [];
+    chatEl.innerHTML = "";
+  };
+  sidebar.appendChild(newBtn);
 
-  if (isThinking) {
-    bubble.textContent = "Thinking...";
-  } else {
-    bubble.innerHTML = formatMessage(text);
-  }
-
-  row.appendChild(bubble);
-  messagesEl.appendChild(row);
-
-  chatWindow.scrollTop = chatWindow.scrollHeight;
-  return bubble;
+  chats.forEach((c,i)=>{
+    const div = document.createElement("div");
+    div.className = "chat-item";
+    div.textContent = "Chat " + (i+1);
+    div.onclick = () => loadChat(i);
+    sidebar.appendChild(div);
+  });
 }
 
-async function sendMessage() {
-  const text = inputEl.value.trim();
-  if (!text || isLoading) return;
+function loadChat(i){
+  currentChat = chats[i];
+  chatEl.innerHTML = "";
+  currentChat.forEach(m=>{
+    addMsg(m.role,m.text);
+  });
+}
 
-  isLoading = true;
-  inputEl.value = '';
+/* CHAT */
+function addMsg(role,text){
+  const div = document.createElement("div");
+  div.className = "msg " + (role==="user"?"user":"ai");
+  div.textContent = text;
+  chatEl.appendChild(div);
+  chatEl.scrollTop = chatEl.scrollHeight;
+}
 
-  addMessage('user', text);
-  history.push({ role: 'user', parts: [{ text }] });
+async function send(){
+  const text = input.value.trim();
+  if(!text) return;
 
-  const bubble = addMessage('ai', '', true);
+  input.value = "";
 
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ history, system: SYSTEM_PROMPT })
+  addMsg("user",text);
+  currentChat.push({role:"user",text});
+
+  const resDiv = document.createElement("div");
+  resDiv.className = "msg ai";
+  resDiv.textContent = "Thinking...";
+  chatEl.appendChild(resDiv);
+
+  const res = await fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({history:currentChat})
   });
 
   const data = await res.json();
-  const reply = data.reply || "No response.";
+  resDiv.textContent = data.reply;
 
-  bubble.innerHTML = formatMessage(reply);
-  history.push({ role: 'model', parts: [{ text: reply }] });
+  currentChat.push({role:"ai",text:data.reply});
 
-  isLoading = false;
+  save();
 }
+
+function save(){
+  if(currentChat.length){
+    chats.push([...currentChat]);
+    localStorage.setItem("chats",JSON.stringify(chats));
+  }
+}
+
+renderSidebar();
 </script>
 
 </body>
