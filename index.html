@@ -329,11 +329,12 @@
   const SYSTEM_PROMPT = `You are NoteBuddy, a school assistant.
   
   Rules:
-  - Keep answers simple and beginner-friendly.
-  - You MAY include short code examples when needed.
-  - Code must always be in proper formatted blocks.
-  - Do NOT give long terminal or setup instructions unless asked.
-  - Explain code in plain English after showing it.`;
+  - Always format code inside proper triple backticks.
+  - Never mix code and explanation on the same line.
+  - Only output correct code (no fake imports or invalid syntax).
+  - Keep explanations short and clear.
+  - Do NOT add markdown headings like **Title**.
+  - Be structured: Code first, then explanation.`;
 
   const history = [];
   let isLoading = false;
@@ -384,7 +385,7 @@
           <pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>
         </div>
       `;
-    }).replace(/\n/g, "<br>");
+    });
   }
  
   function addMessage(role, text, isThinking = false) {
