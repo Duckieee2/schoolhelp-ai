@@ -247,14 +247,14 @@
       <path d="M2 12l10 5 10-5"/>
     </svg>
   </div>
-  <h1>SchoolHelp AI</h1>
+  <h1>NoteBuddy</h1>
   <span class="header-tag">Free</span>
 </header>
 
 <div id="chat-window">
   <div class="messages-inner" id="messages">
     <div class="empty-state" id="empty-state">
-      <h2>SchoolHelp AI</h2>
+      <h2>NoteBuddy</h2>
       <p>Ask me any question</p>
     </div>
   </div>
@@ -274,7 +274,7 @@
 </div>
 
 <script>
-  const SYSTEM_PROMPT = `You are SchoolHelp AI, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise. Use plain text without markdown formatting.`;
+  const SYSTEM_PROMPT = `You are Notebuddy AI, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise. Use plain text without markdown formatting. Also make it so it auto humanizes so its undetected`;
 
   const history = [];
   let isLoading = false;
@@ -302,7 +302,7 @@
 
     const label = document.createElement('div');
     label.className = `msg-label ${role === 'user' ? 'user-label' : ''}`;
-    label.textContent = role === 'user' ? 'You' : 'SchoolHelp';
+    label.textContent = role === 'user' ? 'You' : 'NoteBuddy';
 
     const bubble = document.createElement('div');
     bubble.className = `bubble ${role}${isThinking ? ' thinking' : ''}`;
