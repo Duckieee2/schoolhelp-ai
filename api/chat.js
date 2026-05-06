@@ -23,7 +23,6 @@ export default async function handler(req, res) {
       req.socket?.remoteAddress ||
       "unknown";
 
-    // simple in-memory rate limit
     if (!globalThis.__rateLimit) globalThis.__rateLimit = new Map();
 
     const now = Date.now();
@@ -35,7 +34,6 @@ export default async function handler(req, res) {
 
     globalThis.__rateLimit.set(ip, now);
 
-    // round robin key rotation
     if (globalThis.__groqKeyIndex === undefined) globalThis.__groqKeyIndex = 0;
 
     const apiKey = keys[globalThis.__groqKeyIndex];
@@ -60,10 +58,8 @@ export default async function handler(req, res) {
       [...history]
         .reverse()
         .find(m => m?.role === 'user')?.parts?.[0]?.text || '';
- });
-    }
 
-    const chatHistory = history.slice(-12);
+    const chatHistory = history.slice(-8);
 
     const needsFreshData = (messages) => {
       const text = JSON.stringify(messages).toLowerCase();
@@ -107,21 +103,16 @@ export default async function handler(req, res) {
         });
       }
     }
-    
+
     const cleanHistory = chatHistory
-      .filter(msg =>
-        msg &&
-        (msg.parts?.[0]?.text || msg.content)
-      )
-      .slice(-8)
-    
+      .filter(msg => msg?.parts?.[0]?.text || msg?.content)
+      .slice(-8);
+
     messages.push(
       ...cleanHistory.map(msg => ({
         role: msg.role === 'model' ? 'assistant' : 'user',
         content: String(
-          msg.parts?.[0]?.text ??
-          msg.content ??
-          ''
+          msg.parts?.[0]?.text ?? msg.content ?? ''
         ).trim()
       }))
     );
