@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NoteBuddy</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/prismjs/prism.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-javascript.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-python.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-markup.min.js"></script>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -149,11 +154,18 @@
     border-bottom-right-radius: 4px;
   }
 
-  .bubble.ai {
-    background: #000;
-    border: 1px solid #1a1a1a;
-    border-bottom-left-radius: 4px;
-    white-space: pre-wrap;
+  .bubble.ai pre {
+    background: #0d0d0d;
+    padding: 12px;
+    border-radius: 10px;
+    overflow-x: auto;
+    margin-top: 8px;
+    border: 1px solid #1f1f1f;
+  }
+
+  .bubble.ai code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
   }
 
   .bubble.thinking { color: var(--muted); font-style: italic; }
@@ -165,6 +177,48 @@
   }
   .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
   .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  .code-block {
+    position: relative;
+    margin-top: 10px;
+  }
+
+  .code-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    padding: 6px 10px;
+    background: #0a0a0a;
+    border: 1px solid #1f1f1f;
+    border-bottom: none;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+    color: #888;
+  }
+
+  .code-lang {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .copy-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 11px;
+    transition: color 0.2s;
+  }
+
+  .copy-btn:hover {
+    color: var(--accent);
+  }
+
+  .bubble.ai pre {
+    margin: 0;
+    border-radius: 0 0 10px 10px;
+  }
 
   @keyframes blink {
     0%, 80%, 100% { opacity: 0.2; }
@@ -291,6 +345,30 @@
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
+  function formatMessage(text) {
+    return text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+      const language = lang || "text";
+      const escaped = escapeHtml(code);
+
+      return `
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">${language}</span>
+            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
+          </div>
+          <pre><code class="language-${language}">${escaped}</code></pre>
+        </div>
+      `;
+    }).replace(/\n/g, "<br>");
+  }
+
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
   function addMessage(role, text, isThinking = false) {
     const empty = document.getElementById('empty-state');
     if (empty) empty.remove();
@@ -308,7 +386,8 @@
     if (isThinking) {
       bubble.innerHTML = 'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
     } else {
-      bubble.textContent = text;
+      bubble.innerHTML = formatMessage(text);
+      Prism.highlightAllUnder(bubble);
     }
 
     row.appendChild(label);
@@ -376,6 +455,15 @@
     isLoading = false;
     sendBtn.disabled = false;
     inputEl.focus();
+  }
+
+  function copyCode(button) {
+    const code = button.closest('.code-block').querySelector('code').innerText;
+
+    navigator.clipboard.writeText(code).then(() => {
+      button.textContent = "Copied!";
+      setTimeout(() => button.textContent = "Copy", 1500);
+    });
   }
 </script>
 </body>
