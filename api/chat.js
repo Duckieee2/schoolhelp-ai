@@ -11,6 +11,14 @@ export default async function handler(req, res) {
     process.env.GROQ_API_KEY_5,
   ].filter(Boolean);
 
+  const ip =
+  req.headers["x-forwarded-for"]?.split(",")[0] ||
+  req.socket.remoteAddress;
+
+  if (isRateLimited(ip)) {
+    return res.status(429).json({ error: "Slow down a bit" });
+  }
+
   if (keys.length === 0) {
     return res.status(500).json({ error: 'No GROQ_API_KEY_* keys set in environment variables' });
   }
