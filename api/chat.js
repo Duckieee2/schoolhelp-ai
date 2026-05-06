@@ -1,35 +1,19 @@
-
-// api/chat.js — Vercel serverless function
-// Uses Groq API (free tier) with key rotation across multiple accounts
-//
-// Setup:
-// 1. Go to https://console.groq.com and create an account
-// 2. Get a free API key — repeat with as many accounts as you want
-// 3. In Vercel Dashboard → Settings → Environment Variables, add:
-//      GROQ_API_KEY_1 = gsk_xxxxxxxxxxxx
-//      GROQ_API_KEY_2 = gsk_xxxxxxxxxxxx
-//      GROQ_API_KEY_3 = gsk_xxxxxxxxxxxx
-//    (add as many as you have — any missing ones are just skipped)
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
-
-  // Collect all keys from environment variables
+  
   const keys = [
     process.env.GROQ_API_KEY_1,
     process.env.GROQ_API_KEY_2,
     process.env.GROQ_API_KEY_3,
     process.env.GROQ_API_KEY_4,
     process.env.GROQ_API_KEY_5,
-  ].filter(Boolean); // removes any that aren't set
-
+  ].filter(Boolean); 
   if (keys.length === 0) {
     return res.status(500).json({ error: 'No GROQ_API_KEY_* keys set in environment variables' });
   }
 
-  // Pick a random key — spreads load evenly across accounts
   const apiKey = keys[Math.floor(Math.random() * keys.length)];
 
   const { history, system } = req.body;
@@ -41,7 +25,6 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: 'Conversation too long — please refresh to start a new one.' });
   }
 
-  // Convert history format (Gemini style) to Groq/OpenAI style
   const messages = [
     { role: 'system', content: system || 'You are a helpful school assistant.' },
     ...history.map(msg => ({
@@ -58,7 +41,7 @@ export default async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'llama-3.1-8b-instant', // fast, free, good quality
+        model: 'llama-3.1-8b-instant',
         messages,
         max_tokens: 1024,
         temperature: 0.7
@@ -66,7 +49,6 @@ export default async function handler(req, res) {
     });
 
     if (response.status === 429) {
-      // This key hit its rate limit — tell the user to try again
       return res.status(429).json({ error: 'Too busy right now — try again in a few seconds.' });
     }
 
