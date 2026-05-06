@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SchoolHelp AI</title>
+<title>NoteBuddy</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -274,7 +274,7 @@
 </div>
 
 <script>
-  const SYSTEM_PROMPT = `You are Notebuddy AI, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise. Use plain text without markdown formatting. Also make it so it auto humanizes so its undetected`;
+  const SYSTEM_PROMPT = `You are NoteBuddy, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise. Use plain text without markdown formatting.`;
 
   const history = [];
   let isLoading = false;
@@ -350,8 +350,24 @@
       const reply = data.reply || 'No response received.';
 
       thinkingBubble.classList.remove('thinking');
-      thinkingBubble.textContent = reply;
+      thinkingBubble.textContent = '';
       history.push({ role: 'model', parts: [{ text: reply }] });
+
+      let i = 0;
+      function typeChar() {
+        if (i < reply.length) {
+          thinkingBubble.textContent += reply[i];
+          i++;
+          chatWindow.scrollTop = chatWindow.scrollHeight;
+          setTimeout(typeChar, 18);
+        } else {
+          isLoading = false;
+          sendBtn.disabled = false;
+          inputEl.focus();
+        }
+      }
+      typeChar();
+      return;
 
     } catch (err) {
       thinkingBubble.classList.remove('thinking');
