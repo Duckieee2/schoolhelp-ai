@@ -35,36 +35,62 @@ body{
   overflow:hidden;
 }
 
-/* SIDEBAR */
+/* OVERLAY */
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.35);
+  backdrop-filter:blur(2px);
+  opacity:0;
+  pointer-events:none;
+  transition:0.15s;
+}
+#overlay.show{
+  opacity:1;
+  pointer-events:auto;
+}
+
+/* SIDEBAR ISLAND */
 #sidebar{
-  width:260px;
-  background:#111;
-  border-right:1px solid var(--border);
-  padding:12px;
+  width:220px;
+  max-height:60vh;
+  background:#0d0d0d;
+  border:1px solid #1f1f1f;
+  border-radius:14px;
+  padding:10px;
+  position:absolute;
+  top:70px;
+  left:14px;
+  z-index:20;
+
   display:flex;
   flex-direction:column;
-  gap:10px;
-  transform:translateX(-100%);
-  transition:0.2s;
-  position:absolute;
-  height:100%;
-  z-index:10;
+  gap:8px;
+
+  transform:scale(0.98);
+  opacity:0;
+  pointer-events:none;
+  transition:0.15s;
+  box-shadow:0 10px 30px rgba(0,0,0,0.4);
 }
 
 #sidebar.open{
-  transform:translateX(0);
+  transform:scale(1);
+  opacity:1;
+  pointer-events:auto;
 }
 
 .chat-item{
-  padding:10px;
-  background:#1a1a1a;
+  padding:8px 10px;
+  background:#111;
+  border:1px solid #1f1f1f;
   border-radius:10px;
   cursor:pointer;
   font-size:12px;
 }
 
 .chat-item:hover{
-  background:#222;
+  background:#161616;
 }
 
 /* MAIN */
@@ -72,7 +98,6 @@ main{
   flex:1;
   display:flex;
   flex-direction:column;
-  width:100%;
 }
 
 /* HEADER */
@@ -157,7 +182,7 @@ button.send{
 
 <body>
 
-<!-- SIDEBAR -->
+<div id="overlay" onclick="toggleSidebar()"></div>
 <div id="sidebar"></div>
 
 <main>
@@ -170,7 +195,7 @@ button.send{
 <div id="chat"></div>
 
 <div id="inputBar">
-  <textarea id="input" rows="1"></textarea>
+  <textarea id="input"></textarea>
   <button class="send" onclick="send()">➤</button>
 </div>
 
@@ -182,11 +207,13 @@ let currentChat = [];
 
 const chatEl = document.getElementById("chat");
 const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("overlay");
 const input = document.getElementById("input");
 
 /* SIDEBAR */
 function toggleSidebar(){
   sidebar.classList.toggle("open");
+  overlay.classList.toggle("show");
   renderSidebar();
 }
 
@@ -199,6 +226,7 @@ function renderSidebar(){
   newBtn.onclick = () => {
     currentChat = [];
     chatEl.innerHTML = "";
+    toggleSidebar();
   };
   sidebar.appendChild(newBtn);
 
@@ -206,11 +234,15 @@ function renderSidebar(){
     const div = document.createElement("div");
     div.className = "chat-item";
     div.textContent = "Chat " + (i+1);
-    div.onclick = () => loadChat(i);
+    div.onclick = () => {
+      loadChat(i);
+      toggleSidebar();
+    };
     sidebar.appendChild(div);
   });
 }
 
+/* LOAD */
 function loadChat(i){
   currentChat = chats[i];
   chatEl.innerHTML = "";
@@ -228,6 +260,7 @@ function addMsg(role,text){
   chatEl.scrollTop = chatEl.scrollHeight;
 }
 
+/* SEND */
 async function send(){
   const text = input.value.trim();
   if(!text) return;
@@ -252,16 +285,24 @@ async function send(){
   resDiv.textContent = data.reply;
 
   currentChat.push({role:"ai",text:data.reply});
-
   save();
 }
 
+/* SAVE */
 function save(){
   if(currentChat.length){
     chats.push([...currentChat]);
     localStorage.setItem("chats",JSON.stringify(chats));
   }
 }
+
+/* CLICK OUTSIDE CLOSE */
+document.addEventListener("click",(e)=>{
+  if(!sidebar.contains(e.target) && !e.target.closest(".icon-btn")){
+    sidebar.classList.remove("open");
+    overlay.classList.remove("show");
+  }
+});
 
 renderSidebar();
 </script>
