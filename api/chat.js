@@ -60,24 +60,7 @@ export default async function handler(req, res) {
       [...history]
         .reverse()
         .find(m => m?.role === 'user')?.parts?.[0]?.text || '';
-
-    const isDuckiee2 =
-      lastUserMsg.toLowerCase().includes('duckiee2') ||
-      lastUserMsg.toLowerCase().includes('infuse');
-
-    if (isDuckiee2) {
-      return res.status(200).json({
-        reply: `## Duckiee2
-
-Duckiee2 is a Minecraft plugin and texture pack developer known for creating custom content for the Minecraft community.
-
-He publishes his work on Modrinth and also shares tutorials and development content on YouTube.
-
-### Links
-- Modrinth: https://modrinth.com/user/Duckiee2  
-- YouTube: https://www.youtube.com/duckiee2  
-`
-      });
+ });
     }
 
     const chatHistory = history.slice(-12);
