@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NoteBuddy</title>
 
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Syne:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -13,248 +13,172 @@
 <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/autoloader/prism-autoloader.min.js"></script>
 
 <style>
-body {
-  margin:0;
-  display:flex;
-  height:100vh;
-  font-family: DM Mono;
-  background:#212121;
-  color:#eee;
-  overflow:hidden;
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:#212121;color:#eee;font-family:DM Mono;
+  display:flex;height:100vh;overflow:hidden
 }
 
 /* SIDEBAR */
-#sidebar {
-  width:260px;
-  background:#0f0f0f;
-  border-right:1px solid #222;
-  padding:10px;
-  overflow-y:auto;
+#sidebar{
+  width:220px;background:#111;border-right:1px solid #222;
+  display:flex;flex-direction:column
 }
-
-.chat-item {
-  padding:8px;
-  margin:5px 0;
-  background:#151515;
-  border-radius:6px;
-  cursor:pointer;
+#newChat{
+  padding:10px;margin:10px;background:#222;border:none;
+  color:white;cursor:pointer;border-radius:8px
 }
-
-.chat-item:hover { background:#222; }
+.chat-item{
+  padding:10px;border-bottom:1px solid #1f1f1f;
+  cursor:pointer;font-size:12px
+}
+.chat-item:hover{background:#1a1a1a}
 
 /* MAIN */
-#main {
-  flex:1;
-  display:flex;
-  flex-direction:column;
+#main{flex:1;display:flex;flex-direction:column}
+
+header{
+  padding:12px;border-bottom:1px solid #222;
+  display:flex;align-items:center;gap:10px
 }
 
-#messages {
-  flex:1;
-  overflow:auto;
-  padding:20px;
+#chat{
+  flex:1;overflow:auto;padding:20px
 }
 
-.msg { margin:10px 0; }
+.msg{margin:8px 0;max-width:80%}
+.user{margin-left:auto;background:#0d0d0d;padding:10px;border-radius:10px}
+.ai{background:#151515;padding:10px;border-radius:10px}
 
-.user { text-align:right; color:#9f9; }
-
-.ai {
-  background:#111;
-  padding:10px;
-  border-radius:10px;
+#inputArea{
+  display:flex;padding:10px;border-top:1px solid #222
 }
-
-.input {
-  display:flex;
-  padding:10px;
-  border-top:1px solid #222;
+textarea{
+  flex:1;background:#111;border:none;color:white;
+  padding:10px;resize:none;border-radius:8px
 }
-
-textarea {
-  flex:1;
-  background:#222;
-  border:none;
-  color:#fff;
-  padding:10px;
-  resize:none;
-}
-
-button {
-  background:#fff;
-  border:none;
-  margin-left:10px;
-  cursor:pointer;
+button{
+  margin-left:10px;padding:10px;background:white;
+  border:none;border-radius:8px;cursor:pointer
 }
 </style>
 </head>
 
 <body>
 
-<!-- SIDEBAR -->
 <div id="sidebar">
-  <button onclick="newChat()">+ New Chat</button>
+  <button id="newChat">+ New Chat</button>
   <div id="chatList"></div>
 </div>
 
-<!-- MAIN -->
 <div id="main">
 
-  <div id="messages"></div>
+<header>
+  <strong>NoteBuddy</strong>
+</header>
 
-  <div class="input">
-    <textarea id="input"></textarea>
-    <button onclick="send()">Send</button>
-  </div>
+<div id="chat"></div>
+
+<div id="inputArea">
+  <textarea id="input" rows="1"></textarea>
+  <button onclick="send()">Send</button>
+</div>
 
 </div>
 
 <script>
-const STORAGE = "notebuddy_chats";
-
-let chats = JSON.parse(localStorage.getItem(STORAGE) || "[]");
-let active = null;
-let history = [];
-
-const messagesEl = document.getElementById("messages");
-const chatList = document.getElementById("chatList");
 const input = document.getElementById("input");
+const chat = document.getElementById("chat");
+const chatList = document.getElementById("chatList");
 
-/* ---------- CHAT STORAGE ---------- */
-function save() {
-  localStorage.setItem(STORAGE, JSON.stringify(chats));
+let chats = JSON.parse(localStorage.getItem("chats") || "[]");
+let activeChat = null;
+
+function save(){
+  localStorage.setItem("chats", JSON.stringify(chats));
 }
 
-/* ---------- SIDEBAR ---------- */
-function renderChats() {
+function renderSidebar(){
   chatList.innerHTML = "";
-
-  chats.forEach(c => {
+  chats.forEach(c=>{
     const div = document.createElement("div");
-    div.className = "chat-item";
-    div.textContent = c.title || "Chat";
-    div.onclick = () => loadChat(c.id);
+    div.className="chat-item";
+    div.textContent = c.name || "Chat";
+    div.onclick=()=>loadChat(c.id);
     chatList.appendChild(div);
   });
 }
 
-/* ---------- NEW CHAT ---------- */
-function newChat() {
-  active = {
-    id: crypto.randomUUID(),
-    title: "New chat",
-    history: []
-  };
-
-  chats.unshift(active);
+function newChat(){
+  const id = Date.now();
+  const chatObj = {id, name:"Chat "+(chats.length+1), messages:[]};
+  chats.push(chatObj);
+  activeChat = chatObj;
   save();
-  renderChats();
-
-  history = [];
-  messagesEl.innerHTML = "";
+  renderSidebar();
+  renderChat();
 }
 
-/* ---------- LOAD CHAT ---------- */
-function loadChat(id) {
-  active = chats.find(c => c.id === id);
-  history = active.history;
+function loadChat(id){
+  activeChat = chats.find(c=>c.id===id);
+  renderChat();
+}
 
-  messagesEl.innerHTML = "";
+function renderChat(){
+  chat.innerHTML="";
+  if(!activeChat) return;
 
-  history.forEach(m => {
-    add(m.role, m.text, false);
+  activeChat.messages.forEach(m=>{
+    const div=document.createElement("div");
+    div.className="msg "+m.role;
+    div.innerHTML=m.text;
+    chat.appendChild(div);
   });
 }
 
-/* ---------- MESSAGE RENDER ---------- */
-function add(role, text, saveMsg = true) {
-  const div = document.createElement("div");
-  div.className = "msg " + (role === "user" ? "user" : "ai");
+async function send(){
+  if(!activeChat) newChat();
 
-  div.innerHTML = role === "user"
-    ? text
-    : marked.parse(text);
-
-  messagesEl.appendChild(div);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-
-  if (role === "assistant" && window.Prism) {
-    requestIdleCallback(() => {
-      div.querySelectorAll("pre code").forEach(b => {
-        Prism.highlightElement(b);
-      });
-    });
-  }
-
-  if (saveMsg && active) {
-    history.push({ role, text });
-
-    active.history = history;
-    active.title = active.title === "New chat"
-      ? history[0]?.text?.slice(0, 25)
-      : active.title;
-
-    save();
-    renderChats();
-  }
-}
-
-/* ---------- SEND ---------- */
-async function send() {
   const text = input.value.trim();
-  if (!text) return;
+  if(!text) return;
 
-  input.value = "";
+  input.value="";
 
-  add("user", text);
+  activeChat.messages.push({role:"user",text});
+  renderChat();
 
-  const bubble = document.createElement("div");
-  bubble.className = "msg ai";
-  messagesEl.appendChild(bubble);
+  const resDiv = document.createElement("div");
+  resDiv.className="msg ai";
+  resDiv.textContent="...";
 
-  let reply = "";
+  chat.appendChild(resDiv);
 
-  try {
-    const res = await fetch("/api/chat", {
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ history })
-    });
+  const res = await fetch("/api/chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      history: activeChat.messages.map(m=>({
+        role:m.role==="user"?"user":"model",
+        parts:[{text:m.text}]
+      }))
+    })
+  });
 
-    const data = await res.json();
-    reply = data.reply || "No response";
+  const data = await res.json();
+  const reply = data.reply;
 
-  } catch (e) {
-    reply = "Error: " + e.message;
-  }
+  resDiv.innerHTML = marked.parse(reply);
 
-  /* FAST RENDER (NO DOM PER CHAR) */
-  let i = 0;
+  activeChat.messages.push({role:"ai",text:reply});
 
-  function type() {
-    if (i < reply.length) {
-      bubble.innerHTML = reply.slice(0, i++);
-      requestAnimationFrame(type);
-    } else {
-      bubble.innerHTML = marked.parse(reply);
-
-      if (window.Prism) {
-        bubble.querySelectorAll("pre code").forEach(b =>
-          Prism.highlightElement(b)
-        );
-      }
-
-      add("assistant", reply);
-    }
-  }
-
-  type();
+  save();
+  renderSidebar();
 }
 
-/* INIT */
-newChat();
-renderChats();
+document.getElementById("newChat").onclick=newChat;
 
+renderSidebar();
+if(chats.length) loadChat(chats[0].id);
 </script>
 
 </body>
