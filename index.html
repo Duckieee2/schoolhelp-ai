@@ -550,16 +550,6 @@ function copyCode(button) {
   const code = button.closest('.code-block').querySelector('code').innerText;
   navigator.clipboard.writeText(code);
 }
-
-document.addEventListener('click', (e) => {
-  const isTypingBox = inputEl.contains(e.target);
-  const isButton = e.target.closest('button');
-  const isCodeBlock = e.target.closest('pre, code');
-
-  if (!isTypingBox && !isButton && !isCodeBlock) {
-    inputEl.focus();
-  }
-});
 </script>
 
 </body>
