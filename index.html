@@ -340,198 +340,174 @@
 </div>
 
 <script>
-    const SYSTEM_PROMPT = `
-    You are NoteBuddy, a school assistant.
-    
-    Rules:
-    - Be factual and do not invent personal traits about real people.
-    - If a user asks about a person, only describe known factual information.
-    - Use Markdown for structure (headings, lists, links) when helpful.
-    - Use code blocks only for code.
-    - Keep responses clear, structured, and not overly long.
-    
-    Linking:
-    - Use Markdown links like [text](url)
-    
-    If you are unsure about a topic:
-    - Say you are not certain instead of guessing.
-    `;
+const SYSTEM_PROMPT = `
+You are NoteBuddy, a school assistant.
+`;
 
-  const history = [];
-  let isLoading = false;
+const history = [];
+let isLoading = false;
 
-  const messagesEl = document.getElementById('messages');
-  const inputEl = document.getElementById('user-input');
-  const sendBtn = document.getElementById('send-btn');
-  const chatWindow = document.getElementById('chat-window');
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const chatWindow = document.getElementById('chat-window');
 
-  inputEl.addEventListener('input', () => {
-    inputEl.style.height = 'auto';
-    inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
-  });
+inputEl.addEventListener('input', () => {
+  inputEl.style.height = 'auto';
+  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+});
 
-  inputEl.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  function detectLanguage(code) {
-    if (/^\s*</.test(code)) return "markup";
-    if (/console\.log|const |let |function/.test(code)) return "javascript";
-    if (/def |print\(|import /.test(code)) return "python";
-    if (/SELECT |INSERT |FROM /.test(code)) return "sql";
-    if (/^#!/.test(code)) return "bash";
-    return "text";
+inputEl.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
   }
+});
 
-  function escapeHtml(str) {
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-  
-  function formatMessage(text) {
-    let html = marked.parse(text);
-  
-    // wrap every code block with header + copy button
-    html = html.replace(
-      /<pre><code class="language-(.*?)">([\s\S]*?)<\/code><\/pre>/g,
-      (match, lang, code) => {
-        return `
-          <div class="code-block">
-            <div class="code-header">
-              <span class="code-lang">${lang || "text"}</span>
-              <button class="copy-btn" onclick="copyCode(this)">📋</button>
-            </div>
-            <pre><code class="language-${lang}">${code}</code></pre>
+// ---------- OPTIMISED MARKDOWN ----------
+function formatMessage(text) {
+  let html = marked.parse(text);
+
+  html = html.replace(
+    /<pre><code class="language-(.*?)">([\s\S]*?)<\/code><\/pre>/g,
+    (match, lang, code) => {
+      return `
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">${lang || "text"}</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋</button>
           </div>
-        `;
-      }
-    );
-  
-    return html;
-  }
- 
-  function addMessage(role, text, isThinking = false) {
-    const empty = document.getElementById('empty-state');
-    if (empty) empty.remove();
-
-    const row = document.createElement('div');
-    row.className = `msg-row ${role}`;
-
-    const label = document.createElement('div');
-    label.className = `msg-label ${role === 'user' ? 'user-label' : ''}`;
-    label.textContent = role === 'user' ? 'You' : 'NoteBuddy';
-
-    const bubble = document.createElement('div');
-    bubble.className = `bubble ${role}${isThinking ? ' thinking' : ''}`;
-
-    if (isThinking) {
-      bubble.innerHTML = 'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
-    } else {
-      bubble.innerHTML = formatMessage(text);
-    
-      // wait for DOM to fully render before highlighting
-      requestAnimationFrame(() => {
-        bubble.querySelectorAll('pre code').forEach(block => {
-          Prism.highlightElement(block);
-        });
-      });
+          <pre><code class="language-${lang}">${code}</code></pre>
+        </div>
+      `;
     }
+  );
 
-    row.appendChild(label);
-    row.appendChild(bubble);
-    messagesEl.appendChild(row);
-    chatWindow.scrollTop = chatWindow.scrollHeight;
-    return bubble;
+  return html;
+}
+
+// ---------- ADD MESSAGE ----------
+function addMessage(role, text, isThinking = false) {
+  const empty = document.getElementById('empty-state');
+  if (empty) empty.remove();
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${role}`;
+
+  const label = document.createElement('div');
+  label.className = `msg-label ${role === 'user' ? 'user-label' : ''}`;
+  label.textContent = role === 'user' ? 'You' : 'NoteBuddy';
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${role}${isThinking ? ' thinking' : ''}`;
+
+  if (isThinking) {
+    bubble.innerHTML = 'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+  } else {
+    bubble.innerHTML = formatMessage(text);
+
+    // 🔥 ONLY HIGHLIGHT ONCE (IMPORTANT FIX)
+    requestAnimationFrame(() => {
+      bubble.querySelectorAll('pre code').forEach(block => {
+        Prism.highlightElement(block);
+      });
+    });
   }
 
-  async function sendMessage() {
-    const text = inputEl.value.trim();
-    if (!text || isLoading) return;
+  row.appendChild(label);
+  row.appendChild(bubble);
+  messagesEl.appendChild(row);
+  chatWindow.scrollTop = chatWindow.scrollHeight;
 
-    isLoading = true;
-    sendBtn.disabled = true;
-    inputEl.value = '';
-    inputEl.style.height = 'auto';
+  return bubble;
+}
 
-    addMessage('user', text);
-    history.push({ role: 'user', parts: [{ text }] });
+// ---------- SEND MESSAGE ----------
+async function sendMessage() {
+  const text = inputEl.value.trim();
+  if (!text || isLoading) return;
 
-    const thinkingBubble = addMessage('ai', '', true);
+  isLoading = true;
+  sendBtn.disabled = true;
+  inputEl.value = '';
+  inputEl.style.height = 'auto';
 
-    try {
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ history, system: SYSTEM_PROMPT })
-      });
+  addMessage('user', text);
+  history.push({ role: 'user', parts: [{ text }] });
 
-      if (!response.ok) {
-        const err = await response.json().catch(() => ({}));
-        throw new Error(err.error || `Error ${response.status}`);
+  const bubble = addMessage('ai', '', true);
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history, system: SYSTEM_PROMPT })
+    });
+
+    const data = await response.json();
+    const reply = data.reply || 'No response.';
+
+    bubble.classList.remove('thinking');
+    bubble.innerHTML = '';
+
+    history.push({ role: 'model', parts: [{ text: reply }] });
+
+    // ---------- THROTTLED TYPE EFFECT ----------
+    let i = 0;
+    let buffer = "";
+    let last = 0;
+
+    function type() {
+      const now = performance.now();
+      if (now - last < 8) {
+        requestAnimationFrame(type);
+        return;
       }
+      last = now;
 
-      const data = await response.json();
-      const reply = data.reply || 'No response received.';
+      if (i < reply.length) {
+        buffer += reply[i];
+        bubble.innerHTML = buffer; // NO markdown during typing
+        i++;
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        requestAnimationFrame(type);
+      } else {
+        // FINAL RENDER ONLY
+        bubble.innerHTML = formatMessage(buffer);
 
-      thinkingBubble.classList.remove('thinking');
-      thinkingBubble.innerHTML = '';
-      history.push({ role: 'model', parts: [{ text: reply }] });
-
-      // TYPE EFFECT BUT KEEP FORMATTING
-      let i = 0;
-      let current = "";
-
-      function typeChar() {
-        if (i < reply.length) {
-          current += reply[i];
-          thinkingBubble.innerHTML = formatMessage(current);
-          
-          requestAnimationFrame(() => {
-            thinkingBubble.querySelectorAll('pre code').forEach(block => {
-              Prism.highlightElement(block);
-            });
+        requestAnimationFrame(() => {
+          bubble.querySelectorAll('pre code').forEach(block => {
+            Prism.highlightElement(block);
           });
-          i++;
-          chatWindow.scrollTop = chatWindow.scrollHeight;
-          setTimeout(typeChar, 12);
-        } else {
-          isLoading = false;
-          sendBtn.disabled = false;
-          inputEl.focus();
-        }
+        });
+
+        isLoading = false;
+        sendBtn.disabled = false;
+        inputEl.focus();
       }
-
-      typeChar();
-      return;
-
-    } catch (err) {
-      thinkingBubble.classList.remove('thinking');
-      thinkingBubble.style.color = '#f87171';
-      thinkingBubble.textContent = 'Could not connect. (' + err.message + ')';
     }
+
+    type();
+
+  } catch (err) {
+    bubble.classList.remove('thinking');
+    bubble.style.color = '#f87171';
+    bubble.textContent = 'Error: ' + err.message;
 
     isLoading = false;
     sendBtn.disabled = false;
-    inputEl.focus();
   }
-  
-  function copyCode(button) {
-    const code = button
-      .closest('.code-block')
-      .querySelector('code')
-      .innerText;
-  
-    navigator.clipboard.writeText(code).then(() => {
-      button.textContent = "✔";
-      setTimeout(() => (button.textContent = "📋"), 1200);
-    });
-  }
-  
+}
+
+// ---------- COPY ----------
+function copyCode(button) {
+  const code = button.closest('.code-block').querySelector('code').innerText;
+
+  navigator.clipboard.writeText(code).then(() => {
+    button.textContent = "✔";
+    setTimeout(() => (button.textContent = "📋"), 1200);
+  });
+}
 </script>
 </body>
 </html>
