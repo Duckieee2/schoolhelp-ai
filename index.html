@@ -31,11 +31,13 @@
   }
 
   header {
-    padding: 16px 24px;
+    padding: 14px 24px;
     border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     gap: 12px;
+    flex-shrink: 0;
+    z-index: 10;
   }
 
   .logo-mark {
@@ -71,6 +73,22 @@
     text-transform: uppercase;
   }
 
+  /* Main layout */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* LEFT — chat */
+  .chat-side {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    transition: flex 0.4s cubic-bezier(0.4,0,0.2,1);
+  }
+
   #chat-window {
     flex: 1;
     overflow-y: auto;
@@ -82,7 +100,7 @@
   #chat-window::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 2px; }
 
   .messages-inner {
-    max-width: 700px;
+    max-width: 600px;
     margin: 0 auto;
     padding: 0 20px;
     display: flex;
@@ -174,10 +192,11 @@
   .input-area {
     padding: 14px 20px 20px;
     border-top: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   .input-wrap {
-    max-width: 700px;
+    max-width: 600px;
     margin: 0 auto;
     display: flex;
     align-items: flex-end;
@@ -189,9 +208,7 @@
     transition: border-color 0.2s;
   }
 
-  .input-wrap:focus-within {
-    border-color: rgba(200,240,96,0.35);
-  }
+  .input-wrap:focus-within { border-color: rgba(200,240,96,0.35); }
 
   #user-input {
     flex: 1;
@@ -229,12 +246,160 @@
   #send-btn svg { width: 15px; height: 15px; color: #000; }
 
   .input-hint {
-    max-width: 700px;
+    max-width: 600px;
     margin: 7px auto 0;
     font-size: 11px;
     color: #252525;
     text-align: center;
   }
+
+  /* RIGHT — preview panel */
+  .preview-side {
+    width: 0;
+    overflow: hidden;
+    border-left: 1px solid transparent;
+    display: flex;
+    flex-direction: column;
+    transition: width 0.4s cubic-bezier(0.4,0,0.2,1), border-color 0.4s;
+    flex-shrink: 0;
+  }
+
+  .preview-side.open {
+    width: 50%;
+    border-color: var(--border);
+  }
+
+  .preview-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: #060606;
+  }
+
+  .preview-dots {
+    display: flex;
+    gap: 5px;
+  }
+
+  .preview-dots span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #2a2a2a;
+  }
+
+  .preview-dots span:nth-child(1) { background: #ff5f57; }
+  .preview-dots span:nth-child(2) { background: #febc2e; }
+  .preview-dots span:nth-child(3) { background: #28c840; }
+
+  .preview-lang {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex: 1;
+    text-align: center;
+  }
+
+  .preview-tabs {
+    display: flex;
+    gap: 4px;
+  }
+
+  .tab-btn {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid #222;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .tab-btn.active, .tab-btn:hover {
+    background: var(--accent-dim);
+    border-color: rgba(200,240,96,0.3);
+    color: var(--accent);
+  }
+
+  .copy-btn {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid #222;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+
+  .copy-btn:hover { color: var(--accent); border-color: rgba(200,240,96,0.3); }
+  .copy-btn.copied { color: var(--accent); }
+
+  .preview-body {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Code view */
+  #code-view {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    padding: 20px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.8;
+    color: #cdd6f4;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  #code-view::-webkit-scrollbar { width: 3px; }
+  #code-view::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 2px; }
+
+  /* Live preview iframe */
+  #live-view {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    display: none;
+    background: #fff;
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--accent);
+    vertical-align: text-bottom;
+    animation: cursorBlink 0.8s infinite;
+    margin-left: 1px;
+  }
+
+  @keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  /* Syntax colors */
+  .tok-keyword { color: #cba6f7; }
+  .tok-string { color: #a6e3a1; }
+  .tok-comment { color: #6c7086; font-style: italic; }
+  .tok-number { color: #fab387; }
+  .tok-tag { color: #89dceb; }
+  .tok-attr { color: #f38ba8; }
 </style>
 </head>
 <body>
@@ -251,38 +416,67 @@
   <span class="header-tag">Free</span>
 </header>
 
-<div id="chat-window">
-  <div class="messages-inner" id="messages">
-    <div class="empty-state" id="empty-state">
-      <h2>NoteBuddy</h2>
-      <p>Ask me any question</p>
+<div class="main">
+  <!-- Chat -->
+  <div class="chat-side">
+    <div id="chat-window">
+      <div class="messages-inner" id="messages">
+        <div class="empty-state" id="empty-state">
+          <h2>NoteBuddy</h2>
+          <p>Ask me any question</p>
+        </div>
+      </div>
+    </div>
+    <div class="input-area">
+      <div class="input-wrap">
+        <textarea id="user-input" placeholder="Ask me any question" rows="1"></textarea>
+        <button id="send-btn" onclick="sendMessage()" aria-label="Send">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"/>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+      <p class="input-hint">Enter to send · Shift+Enter for new line</p>
+    </div>
+  </div>
+
+  <!-- Preview panel -->
+  <div class="preview-side" id="preview-side">
+    <div class="preview-header">
+      <div class="preview-dots">
+        <span></span><span></span><span></span>
+      </div>
+      <span class="preview-lang" id="preview-lang">code</span>
+      <div class="preview-tabs" id="preview-tabs"></div>
+      <button class="copy-btn" id="copy-btn" onclick="copyCode()">copy</button>
+    </div>
+    <div class="preview-body">
+      <div id="code-view"></div>
+      <iframe id="live-view" sandbox="allow-scripts"></iframe>
     </div>
   </div>
 </div>
 
-<div class="input-area">
-  <div class="input-wrap">
-    <textarea id="user-input" placeholder="Ask me any question" rows="1"></textarea>
-    <button id="send-btn" onclick="sendMessage()" aria-label="Send">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"/>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
-    </button>
-  </div>
-  <p class="input-hint">Enter to send · Shift+Enter for new line</p>
-</div>
-
 <script>
-  const SYSTEM_PROMPT = `You are NoteBuddy, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise. Use plain text without markdown formatting.`;
+  const SYSTEM_PROMPT = `You are NoteBuddy, a helpful assistant for school students. Answer questions clearly and helpfully. Be encouraging and concise. When writing code, always wrap it in triple backtick code fences with the language name, like \`\`\`html or \`\`\`python. Use plain text for non-code responses, no markdown.`;
 
   const history = [];
   let isLoading = false;
+  let currentCode = '';
+  let currentLang = '';
+  let activeTab = 'code';
 
   const messagesEl = document.getElementById('messages');
   const inputEl = document.getElementById('user-input');
   const sendBtn = document.getElementById('send-btn');
   const chatWindow = document.getElementById('chat-window');
+  const previewSide = document.getElementById('preview-side');
+  const codeView = document.getElementById('code-view');
+  const liveView = document.getElementById('live-view');
+  const previewLang = document.getElementById('preview-lang');
+  const previewTabs = document.getElementById('preview-tabs');
+  const copyBtn = document.getElementById('copy-btn');
 
   inputEl.addEventListener('input', () => {
     inputEl.style.height = 'auto';
@@ -292,6 +486,75 @@
   inputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
+
+  function extractCode(text) {
+    const match = text.match(/```(\w+)?\n?([\s\S]*?)```/);
+    if (match) {
+      return { lang: (match[1] || 'code').toLowerCase(), code: match[2].trim() };
+    }
+    return null;
+  }
+
+  function stripCode(text) {
+    return text.replace(/```[\s\S]*?```/g, '[See code panel →]').trim();
+  }
+
+  function openPreview(lang, code) {
+    currentCode = code;
+    currentLang = lang;
+    previewLang.textContent = lang;
+
+    // Build tabs
+    const canPreview = ['html', 'css', 'javascript', 'js', 'svg'].includes(lang);
+    previewTabs.innerHTML = '';
+
+    const codeTab = document.createElement('button');
+    codeTab.className = 'tab-btn active';
+    codeTab.textContent = 'code';
+    codeTab.onclick = () => switchTab('code');
+    previewTabs.appendChild(codeTab);
+
+    if (canPreview) {
+      const previewTab = document.createElement('button');
+      previewTab.className = 'tab-btn';
+      previewTab.textContent = 'preview';
+      previewTab.onclick = () => switchTab('preview');
+      previewTabs.appendChild(previewTab);
+    }
+
+    previewSide.classList.add('open');
+    switchTab('code');
+    return codeView;
+  }
+
+  function switchTab(tab) {
+    activeTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent === tab);
+    });
+
+    if (tab === 'code') {
+      codeView.style.display = 'block';
+      liveView.style.display = 'none';
+    } else {
+      codeView.style.display = 'none';
+      liveView.style.display = 'block';
+
+      // Render in iframe
+      let content = currentCode;
+      if (currentLang === 'css') content = `<style>${currentCode}</style><p>CSS preview</p>`;
+      if (currentLang === 'javascript' || currentLang === 'js') content = `<script>${currentCode}<\/script><p>Check console for output</p>`;
+      liveView.srcdoc = content;
+    }
+  }
+
+  function copyCode() {
+    navigator.clipboard.writeText(currentCode).then(() => {
+      copyBtn.textContent = 'copied!';
+      copyBtn.classList.add('copied');
+      setTimeout(() => { copyBtn.textContent = 'copy'; copyBtn.classList.remove('copied'); }, 2000);
+    });
+  }
 
   function addMessage(role, text, isThinking = false) {
     const empty = document.getElementById('empty-state');
@@ -349,25 +612,77 @@
       const data = await response.json();
       const reply = data.reply || 'No response received.';
 
-      thinkingBubble.classList.remove('thinking');
-      thinkingBubble.textContent = '';
       history.push({ role: 'model', parts: [{ text: reply }] });
 
-      let i = 0;
-      function typeChar() {
-        if (i < reply.length) {
-          thinkingBubble.textContent += reply[i];
-          i++;
-          chatWindow.scrollTop = chatWindow.scrollHeight;
-          setTimeout(typeChar, 18);
-        } else {
-          isLoading = false;
-          sendBtn.disabled = false;
-          inputEl.focus();
+      // Check for code
+      const extracted = extractCode(reply);
+      const displayText = extracted ? stripCode(reply) : reply;
+
+      thinkingBubble.classList.remove('thinking');
+      thinkingBubble.textContent = '';
+
+      if (extracted) {
+        const codeEl = openPreview(extracted.lang, '');
+        codeEl.textContent = '';
+
+        // Typewrite chat text first, then code simultaneously
+        let i = 0;
+        let j = 0;
+        const code = extracted.code;
+
+        // Add blinking cursor to code panel
+        const cursorEl = document.createElement('span');
+        cursorEl.className = 'cursor';
+        codeEl.appendChild(cursorEl);
+
+        function typeChat() {
+          if (i < displayText.length) {
+            thinkingBubble.textContent += displayText[i];
+            i++;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            setTimeout(typeChat, 18);
+          }
         }
+
+        function typeCode() {
+          if (j < code.length) {
+            codeEl.insertBefore(document.createTextNode(code[j]), cursorEl);
+            j++;
+            codeEl.scrollTop = codeEl.scrollHeight;
+            setTimeout(typeCode, 8); // faster for code
+          } else {
+            cursorEl.remove();
+            // Update live preview if on preview tab
+            currentCode = code;
+            if (activeTab === 'preview') switchTab('preview');
+            isLoading = false;
+            sendBtn.disabled = false;
+            inputEl.focus();
+          }
+        }
+
+        typeChat();
+        typeCode();
+        return;
+
+      } else {
+        // Normal typewriter for text only
+        let i = 0;
+        function typeChar() {
+          if (i < displayText.length) {
+            thinkingBubble.textContent += displayText[i];
+            i++;
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            setTimeout(typeChar, 18);
+          } else {
+            isLoading = false;
+            sendBtn.disabled = false;
+            inputEl.focus();
+          }
+        }
+        typeChar();
+        return;
       }
-      typeChar();
-      return;
 
     } catch (err) {
       thinkingBubble.classList.remove('thinking');
@@ -378,7 +693,6 @@
     isLoading = false;
     sendBtn.disabled = false;
     inputEl.focus();
-    chatWindow.scrollTop = chatWindow.scrollHeight;
   }
 </script>
 </body>
