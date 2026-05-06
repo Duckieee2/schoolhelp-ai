@@ -372,11 +372,21 @@
   }
 
   function formatMessage(text) {
-    text = text.replace(/```[\s\S]*?```/g, "⚠️ Code removed for simplicity");
+    return text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+      const language = lang || "text";
   
-    return text.replace(/\n/g, "<br>");
+      return `
+        <div class="code-block">
+          <div class="code-header">
+            <span class="code-lang">${language}</span>
+            <button class="copy-btn" onclick="copyCode(this)">📋</button>
+          </div>
+          <pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>
+        </div>
+      `;
+    }).replace(/\n/g, "<br>");
   }
-
+ 
   function addMessage(role, text, isThinking = false) {
     const empty = document.getElementById('empty-state');
     if (empty) empty.remove();
