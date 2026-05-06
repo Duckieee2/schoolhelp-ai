@@ -7,6 +7,7 @@
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-core.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/autoloader/prism-autoloader.min.js"></script>
 <script>
@@ -391,21 +392,27 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;");
   }
-
-  function formatMessage(text) {
-    return text.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
-      const language = lang || "text";
   
-      return `
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-lang">${language}</span>
-            <button class="copy-btn" onclick="copyCode(this)">📋</button>
+  function formatMessage(text) {
+    let html = marked.parse(text);
+  
+    // wrap every code block with header + copy button
+    html = html.replace(
+      /<pre><code class="language-(.*?)">([\s\S]*?)<\/code><\/pre>/g,
+      (match, lang, code) => {
+        return `
+          <div class="code-block">
+            <div class="code-header">
+              <span class="code-lang">${lang || "text"}</span>
+              <button class="copy-btn" onclick="copyCode(this)">📋</button>
+            </div>
+            <pre><code class="language-${lang}">${code}</code></pre>
           </div>
-          <pre><code class="language-${language}">${escapeHtml(code.trim())}</code></pre>
-        </div>
-      `;
-    });
+        `;
+      }
+    );
+  
+    return html;
   }
  
   function addMessage(role, text, isThinking = false) {
@@ -426,7 +433,13 @@
       bubble.innerHTML = 'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
     } else {
       bubble.innerHTML = formatMessage(text);
-      Prism.highlightAllUnder(bubble);
+    
+      // wait for DOM to fully render before highlighting
+      requestAnimationFrame(() => {
+        bubble.querySelectorAll('pre code').forEach(block => {
+          Prism.highlightElement(block);
+        });
+      });
     }
 
     row.appendChild(label);
@@ -477,7 +490,12 @@
         if (i < reply.length) {
           current += reply[i];
           thinkingBubble.innerHTML = formatMessage(current);
-          Prism.highlightAllUnder(thinkingBubble);
+          
+          requestAnimationFrame(() => {
+            thinkingBubble.querySelectorAll('pre code').forEach(block => {
+              Prism.highlightElement(block);
+            });
+          });
           i++;
           chatWindow.scrollTop = chatWindow.scrollHeight;
           setTimeout(typeChar, 12);
@@ -501,15 +519,19 @@
     sendBtn.disabled = false;
     inputEl.focus();
   }
-
+  
   function copyCode(button) {
-    const code = button.closest('.code-block').querySelector('code').innerText;
-
+    const code = button
+      .closest('.code-block')
+      .querySelector('code')
+      .innerText;
+  
     navigator.clipboard.writeText(code).then(() => {
       button.textContent = "✔";
-      setTimeout(() => button.textContent = "📋", 1200);
+      setTimeout(() => (button.textContent = "📋"), 1200);
     });
   }
+  
 </script>
 </body>
 </html>
