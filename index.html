@@ -4,510 +4,258 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NoteBuddy</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono&family=Syne:wght@400;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-core.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/prismjs/plugins/autoloader/prism-autoloader.min.js"></script>
-<script>
-  Prism.plugins.autoloader.languages_path =
-    "https://cdn.jsdelivr.net/npm/prismjs/components/";
-</script>
+
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --accent: #ffffff;
-    --accent-dim: rgba(200,240,96,0.1);
-    --text: #e8eaf0;
-    --muted: #555;
-    --border: #1a1a1a;
-    --radius: 14px;
-    --font-display: 'Syne', sans-serif;
-    --font-mono: 'DM Mono', monospace;
-  }
-
-  body {
-    background: #212121;
-    color: #ececf1;
-    font-family: var(--font-mono);
-    font-size: 14px;
-    height: 100dvh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  header {
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .logo-mark {
-    width: 30px;
-    height: 30px;
-    background: var(--accent);
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-  }
-
-  .logo-mark svg { width: 16px; height: 16px; }
-
-  header h1 {
-    font-family: var(--font-display);
-    font-size: 16px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--text);
-  }
-
-  .header-tag {
-    margin-left: auto;
-    font-size: 10px;
-    color: var(--accent);
-    background: var(--accent-dim);
-    border: 1px solid rgba(200,240,96,0.2);
-    border-radius: 20px;
-    padding: 3px 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-
-  #chat-window {
-    flex: 1;
-    overflow-y: auto;
-    padding: 28px 0;
-    scroll-behavior: smooth;
-  }
-
-  #chat-window::-webkit-scrollbar { width: 3px; }
-  #chat-window::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 2px; }
-
-  .messages-inner {
-    max-width: 700px;
-    margin: 0 auto;
-    padding: 0 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 340px;
-    gap: 8px;
-    text-align: center;
-  }
-
-  .empty-state h2 {
-    font-family: var(--font-display);
-    font-size: 24px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-
-  .empty-state p { color: var(--muted); font-size: 13px; }
-
-  .msg-row {
-    display: flex;
-    flex-direction: column;
-    animation: fadeUp 0.18s ease;
-    margin-bottom: 2px;
-  }
-
-  @keyframes fadeUp {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  .msg-row.user { align-items: flex-end; margin-top: 14px; }
-  .msg-row.ai { align-items: flex-start; margin-top: 4px; }
-
-  .msg-label {
-    font-size: 10px;
-    color: var(--muted);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin-bottom: 5px;
-    padding: 0 2px;
-  }
-
-  .msg-label.user-label { color: rgba(200,240,96,0.4); }
-
-  .bubble {
-    max-width: 88%;
-    padding: 11px 15px;
-    border-radius: var(--radius);
-    line-height: 1.8;
-    font-size: 13.5px;
-  }
-
-  .bubble.user {
-    background: #0d0d0d;
-    border: 1px solid #222;
-    border-bottom-right-radius: 4px;
-  }
-
-  .bubble.ai pre {
-    background: #0d0d0d;
-    padding: 12px;
-    border-radius: 10px;
-    overflow-x: auto;
-    margin-top: 8px;
-    border: 1px solid #1f1f1f;
-  }
-
-  .bubble.ai {
-    background: #0d0d0d;
-    border: 1px solid #1f1f1f;
-    border-radius: 14px;
-    padding: 11px 15px;
-    line-height: 1.8;
-    font-size: 13.5px;
-    max-width: 88%;
-  }
-
-  .bubble.ai code {
-    font-family: var(--font-mono);
-    font-size: 12.5px;
-  }
-
-  .bubble.thinking { color: var(--muted); font-style: italic; }
-
-  .thinking-dots span {
-    display: inline-block;
-    animation: blink 1.2s infinite;
-    color: var(--accent);
-  }
-  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
-
-  .code-block {
-    position: relative;
-    margin-top: 10px;
-  }
-
-  .code-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 11px;
-    padding: 6px 10px;
-    background: #0a0a0a;
-    border: 1px solid #1f1f1f;
-    border-bottom: none;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    color: #888;
-  }
-
-  .code-lang {
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .copy-btn {
-    background: none;
-    border: none;
-    color: #aaa;
-    cursor: pointer;
-    font-size: 11px;
-    transition: color 0.2s;
-  }
-
-  .copy-btn:hover {
-    color: var(--accent);
-  }
-
-  .bubble.ai pre {
-    margin: 0;
-    border-radius: 0 0 10px 10px;
-  }
-
-  @keyframes blink {
-    0%, 80%, 100% { opacity: 0.2; }
-    40% { opacity: 1; }
-  }
-
-  .input-area {
-    padding: 14px 20px 20px;
-    border-top: 1px solid var(--border);
-  }
-
-  .input-wrap {
-    max-width: 700px;
-    margin: 0 auto;
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    background: #303030;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: var(--radius);
-    padding: 10px 10px 10px 16px;
-    transition: border-color 0.2s;
-  }
-
-  .input-wrap:focus-within { border-color: rgba(200,240,96,0.35); }
-
-  #user-input {
-    flex: 1;
-    background: none;
-    border: none;
-    outline: none;
-    color: var(--text);
-    font-family: var(--font-mono);
-    font-size: 13.5px;
-    line-height: 1.6;
-    resize: none;
-    max-height: 140px;
-    min-height: 24px;
-  }
-
-  #user-input::placeholder { color: #2e2e2e; }
-
-  #send-btn {
-    flex-shrink: 0;
-    width: 34px;
-    height: 34px;
-    background: var(--accent);
-    border: none;
-    border-radius: 9px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.15s;
-  }
-
-  #send-btn:hover { background: #d4f570; transform: scale(1.05); }
-  #send-btn:active { transform: scale(0.97); }
-  #send-btn:disabled { background: #1a1a1a; cursor: not-allowed; transform: none; }
-  #send-btn svg { width: 15px; height: 15px; color: #000; }
-
-  .input-hint {
-    max-width: 700px;
-    margin: 7px auto 0;
-    font-size: 11px;
-    color: #252525;
-    text-align: center;
-  }
-</style>
-</head>
-<body>
-
-<header>
-  <div class="logo-mark">
-    <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-      <path d="M2 17l10 5 10-5"/>
-      <path d="M2 12l10 5 10-5"/>
-    </svg>
-  </div>
-  <h1>NoteBuddy</h1>
-  <span class="header-tag">Free</span>
-</header>
-
-<div id="chat-window">
-  <div class="messages-inner" id="messages">
-    <div class="empty-state" id="empty-state">
-      <h2>NoteBuddy</h2>
-      <p>Ask me any question</p>
-    </div>
-  </div>
-</div>
-
-<div class="input-area">
-  <div class="input-wrap">
-    <textarea id="user-input" placeholder="Ask me any question" rows="1"></textarea>
-    <button id="send-btn" onclick="sendMessage()" aria-label="Send">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="22" y1="2" x2="11" y2="13"/>
-        <polygon points="22 2 15 22 11 13 2 9 22 2"/>
-      </svg>
-    </button>
-  </div>
-  <p class="input-hint">Enter to send · Shift+Enter for new line</p>
-</div>
-
-<script>
-const SYSTEM_PROMPT = `
-You are NoteBuddy, a school assistant.
-`;
-
-const history = [];
-let isLoading = false;
-
-const messagesEl = document.getElementById('messages');
-const inputEl = document.getElementById('user-input');
-const sendBtn = document.getElementById('send-btn');
-const chatWindow = document.getElementById('chat-window');
-
-inputEl.addEventListener('input', () => {
-  inputEl.style.height = 'auto';
-  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
-});
-
-inputEl.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
-});
-
-// ---------- OPTIMISED MARKDOWN ----------
-function formatMessage(text) {
-  let html = marked.parse(text);
-
-  html = html.replace(
-    /<pre><code class="language-(.*?)">([\s\S]*?)<\/code><\/pre>/g,
-    (match, lang, code) => {
-      return `
-        <div class="code-block">
-          <div class="code-header">
-            <span class="code-lang">${lang || "text"}</span>
-            <button class="copy-btn" onclick="copyCode(this)">📋</button>
-          </div>
-          <pre><code class="language-${lang}">${code}</code></pre>
-        </div>
-      `;
-    }
-  );
-
-  return html;
+body {
+  margin:0;
+  display:flex;
+  height:100vh;
+  font-family: DM Mono;
+  background:#212121;
+  color:#eee;
+  overflow:hidden;
 }
 
-// ---------- ADD MESSAGE ----------
-function addMessage(role, text, isThinking = false) {
-  const empty = document.getElementById('empty-state');
-  if (empty) empty.remove();
+/* SIDEBAR */
+#sidebar {
+  width:260px;
+  background:#0f0f0f;
+  border-right:1px solid #222;
+  padding:10px;
+  overflow-y:auto;
+}
 
-  const row = document.createElement('div');
-  row.className = `msg-row ${role}`;
+.chat-item {
+  padding:8px;
+  margin:5px 0;
+  background:#151515;
+  border-radius:6px;
+  cursor:pointer;
+}
 
-  const label = document.createElement('div');
-  label.className = `msg-label ${role === 'user' ? 'user-label' : ''}`;
-  label.textContent = role === 'user' ? 'You' : 'NoteBuddy';
+.chat-item:hover { background:#222; }
 
-  const bubble = document.createElement('div');
-  bubble.className = `bubble ${role}${isThinking ? ' thinking' : ''}`;
+/* MAIN */
+#main {
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
 
-  if (isThinking) {
-    bubble.innerHTML = 'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
-  } else {
-    bubble.innerHTML = formatMessage(text);
+#messages {
+  flex:1;
+  overflow:auto;
+  padding:20px;
+}
 
-    // 🔥 ONLY HIGHLIGHT ONCE (IMPORTANT FIX)
-    requestAnimationFrame(() => {
-      bubble.querySelectorAll('pre code').forEach(block => {
-        Prism.highlightElement(block);
+.msg { margin:10px 0; }
+
+.user { text-align:right; color:#9f9; }
+
+.ai {
+  background:#111;
+  padding:10px;
+  border-radius:10px;
+}
+
+.input {
+  display:flex;
+  padding:10px;
+  border-top:1px solid #222;
+}
+
+textarea {
+  flex:1;
+  background:#222;
+  border:none;
+  color:#fff;
+  padding:10px;
+  resize:none;
+}
+
+button {
+  background:#fff;
+  border:none;
+  margin-left:10px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <button onclick="newChat()">+ New Chat</button>
+  <div id="chatList"></div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <div id="messages"></div>
+
+  <div class="input">
+    <textarea id="input"></textarea>
+    <button onclick="send()">Send</button>
+  </div>
+
+</div>
+
+<script>
+const STORAGE = "notebuddy_chats";
+
+let chats = JSON.parse(localStorage.getItem(STORAGE) || "[]");
+let active = null;
+let history = [];
+
+const messagesEl = document.getElementById("messages");
+const chatList = document.getElementById("chatList");
+const input = document.getElementById("input");
+
+/* ---------- CHAT STORAGE ---------- */
+function save() {
+  localStorage.setItem(STORAGE, JSON.stringify(chats));
+}
+
+/* ---------- SIDEBAR ---------- */
+function renderChats() {
+  chatList.innerHTML = "";
+
+  chats.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "chat-item";
+    div.textContent = c.title || "Chat";
+    div.onclick = () => loadChat(c.id);
+    chatList.appendChild(div);
+  });
+}
+
+/* ---------- NEW CHAT ---------- */
+function newChat() {
+  active = {
+    id: crypto.randomUUID(),
+    title: "New chat",
+    history: []
+  };
+
+  chats.unshift(active);
+  save();
+  renderChats();
+
+  history = [];
+  messagesEl.innerHTML = "";
+}
+
+/* ---------- LOAD CHAT ---------- */
+function loadChat(id) {
+  active = chats.find(c => c.id === id);
+  history = active.history;
+
+  messagesEl.innerHTML = "";
+
+  history.forEach(m => {
+    add(m.role, m.text, false);
+  });
+}
+
+/* ---------- MESSAGE RENDER ---------- */
+function add(role, text, saveMsg = true) {
+  const div = document.createElement("div");
+  div.className = "msg " + (role === "user" ? "user" : "ai");
+
+  div.innerHTML = role === "user"
+    ? text
+    : marked.parse(text);
+
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  if (role === "assistant" && window.Prism) {
+    requestIdleCallback(() => {
+      div.querySelectorAll("pre code").forEach(b => {
+        Prism.highlightElement(b);
       });
     });
   }
 
-  row.appendChild(label);
-  row.appendChild(bubble);
-  messagesEl.appendChild(row);
-  chatWindow.scrollTop = chatWindow.scrollHeight;
+  if (saveMsg && active) {
+    history.push({ role, text });
 
-  return bubble;
-}
+    active.history = history;
+    active.title = active.title === "New chat"
+      ? history[0]?.text?.slice(0, 25)
+      : active.title;
 
-// ---------- SEND MESSAGE ----------
-async function sendMessage() {
-  const text = inputEl.value.trim();
-  if (!text || isLoading) return;
-
-  isLoading = true;
-  sendBtn.disabled = true;
-  inputEl.value = '';
-  inputEl.style.height = 'auto';
-
-  addMessage('user', text);
-  history.push({ role: 'user', parts: [{ text }] });
-
-  const bubble = addMessage('ai', '', true);
-
-  try {
-    const response = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ history, system: SYSTEM_PROMPT })
-    });
-
-    const data = await response.json();
-    const reply = data.reply || 'No response.';
-
-    bubble.classList.remove('thinking');
-    bubble.innerHTML = '';
-
-    history.push({ role: 'model', parts: [{ text: reply }] });
-
-    // ---------- THROTTLED TYPE EFFECT ----------
-    let i = 0;
-    let buffer = "";
-    let last = 0;
-
-    function type() {
-      const now = performance.now();
-      if (now - last < 8) {
-        requestAnimationFrame(type);
-        return;
-      }
-      last = now;
-
-      if (i < reply.length) {
-        buffer += reply[i];
-        bubble.innerHTML = buffer; // NO markdown during typing
-        i++;
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-        requestAnimationFrame(type);
-      } else {
-        // FINAL RENDER ONLY
-        bubble.innerHTML = formatMessage(buffer);
-
-        requestAnimationFrame(() => {
-          bubble.querySelectorAll('pre code').forEach(block => {
-            Prism.highlightElement(block);
-          });
-        });
-
-        isLoading = false;
-        sendBtn.disabled = false;
-        inputEl.focus();
-      }
-    }
-
-    type();
-
-  } catch (err) {
-    bubble.classList.remove('thinking');
-    bubble.style.color = '#f87171';
-    bubble.textContent = 'Error: ' + err.message;
-
-    isLoading = false;
-    sendBtn.disabled = false;
+    save();
+    renderChats();
   }
 }
 
-// ---------- COPY ----------
-function copyCode(button) {
-  const code = button.closest('.code-block').querySelector('code').innerText;
+/* ---------- SEND ---------- */
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
 
-  navigator.clipboard.writeText(code).then(() => {
-    button.textContent = "✔";
-    setTimeout(() => (button.textContent = "📋"), 1200);
-  });
+  input.value = "";
+
+  add("user", text);
+
+  const bubble = document.createElement("div");
+  bubble.className = "msg ai";
+  messagesEl.appendChild(bubble);
+
+  let reply = "";
+
+  try {
+    const res = await fetch("/api/chat", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ history })
+    });
+
+    const data = await res.json();
+    reply = data.reply || "No response";
+
+  } catch (e) {
+    reply = "Error: " + e.message;
+  }
+
+  /* FAST RENDER (NO DOM PER CHAR) */
+  let i = 0;
+
+  function type() {
+    if (i < reply.length) {
+      bubble.innerHTML = reply.slice(0, i++);
+      requestAnimationFrame(type);
+    } else {
+      bubble.innerHTML = marked.parse(reply);
+
+      if (window.Prism) {
+        bubble.querySelectorAll("pre code").forEach(b =>
+          Prism.highlightElement(b)
+        );
+      }
+
+      add("assistant", reply);
+    }
+  }
+
+  type();
 }
+
+/* INIT */
+newChat();
+renderChats();
+
 </script>
+
 </body>
 </html>
