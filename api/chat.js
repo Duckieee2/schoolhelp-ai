@@ -124,11 +124,22 @@ He publishes his work on Modrinth and also shares tutorials and development cont
         });
       }
     }
-
+    
+    const cleanHistory = chatHistory
+      .filter(msg =>
+        msg &&
+        (msg.parts?.[0]?.text || msg.content)
+      )
+      .slice(-8)
+    
     messages.push(
-      ...chatHistory.map(msg => ({
-        role: msg?.role === 'model' ? 'assistant' : 'user',
-        content: msg?.parts?.[0]?.text || msg?.content || ''
+      ...cleanHistory.map(msg => ({
+        role: msg.role === 'model' ? 'assistant' : 'user',
+        content: String(
+          msg.parts?.[0]?.text ??
+          msg.content ??
+          ''
+        ).trim()
       }))
     );
 
@@ -143,7 +154,7 @@ He publishes his work on Modrinth and also shares tutorials and development cont
         body: JSON.stringify({
           model: 'llama-3.1-8b-instant',
           messages,
-          max_tokens: 512,
+          max_tokens: 2000,
           temperature: 0.7
         })
       }
