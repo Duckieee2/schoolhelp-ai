@@ -326,12 +326,13 @@
 </div>
 
 <script>
-  const SYSTEM_PROMPT = `You are NoteBuddy, a helpful assistant for school students.
-
-Rules:
-- Do NOT output code or programming examples.
-- If asked for code, explain in plain English instead.
-- Be clear, simple, and concise.`;
+  const SYSTEM_PROMPT = `You are NoteBuddy.
+  
+  Rules:
+  - Do NOT use programming concepts or syntax.
+  - Avoid mentioning functions, code, or scripts.
+  - Explain everything in simple everyday language only.
+  - No technical examples.`;
 
   const history = [];
   let isLoading = false;
