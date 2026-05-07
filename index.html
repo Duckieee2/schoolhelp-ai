@@ -126,6 +126,75 @@
       box-shadow: -5px 0 0 2px var(--btn-bg, #111);
     }
 
+    /* ── THEME SIDEBAR ── */
+    #theme-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+
+    #theme-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    #theme-sidebar {
+      position: fixed;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 220px;
+      background: var(--sidebar-bg, #181818);
+      border-left: 1px solid var(--sidebar-border, #252525);
+      z-index: 101;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), background 0.3s;
+    }
+
+    #theme-sidebar.open {
+      transform: translateX(0);
+    }
+
+    .theme-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 20px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .theme-option:hover {
+      background: var(--sidebar-item-hover, #222);
+      color: var(--text);
+    }
+
+    .theme-option.active {
+      color: var(--text);
+    }
+
+    .theme-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid transparent;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+
+    .theme-option.active .theme-swatch {
+      border-color: var(--text);
+      transform: scale(1.15);
+    }
+
     /* ── SIDEBAR ── */
     #sidebar-overlay {
       position: fixed;
@@ -497,7 +566,16 @@
 
 <body>
 
-<!-- Sidebar overlay -->
+<!-- Theme sidebar -->
+<div id="theme-overlay" onclick="closeThemeSidebar()"></div>
+<div id="theme-sidebar">
+  <div class="sidebar-header">
+    <span class="sidebar-title">Themes</span>
+  </div>
+  <div id="theme-list"></div>
+</div>
+
+<!-- Left sidebar overlay -->
 <div id="sidebar-overlay" onclick="closeSidebar()"></div>
 
 <!-- Sidebar -->
@@ -980,55 +1058,93 @@ const THEMES = [
   },
   {
     name: 'Coffee',
-    '--bg':         '#1e1612',
-    '--text':       '#f0e6d3',
-    '--muted':      '#9c8878',
-    '--border':     '#2e2218',
-    '--bubble-user':'#140e0a',
-    '--bubble-ai':  '#140e0a',
-    '--bubble-user-border': '#3a2a1e',
-    '--bubble-ai-border':   '#2a1e14',
-    '--input-bg':   '#2a1e14',
-    '--input-border':'rgba(180,130,80,0.2)',
-    '--input-border-focus':'rgba(180,130,80,0.5)',
-    '--input-color': '#f0e6d3',
-    '--header-bg':  '#1e1612',
-    '--code-bg':    '#110c08',
-    '--code-header-bg': '#0d0905',
-    '--hint-color': '#4a3828',
-    '--send-bg':    '#b07840',
-    '--send-color': '#fff',
-    '--btn-bg':     '#261a10',
-    '--btn-hover':  '#2e2218',
-    '--btn-border': '#3e2e1e',
-    '--btn-moon':   '#b07840',
-    '--sidebar-bg': '#180e0a',
-    '--sidebar-border': '#2e2218',
-    '--sidebar-item-hover': '#261a10',
-    '--sidebar-label': '#7a5a40',
-    '--sidebar-footer': '#3e2e1e',
-    '--logo-bg':    '#b07840',
-    '--logo-stroke':'#fff',
+    '--bg':         '#e8ddd0',
+    '--text':       '#2e1f0e',
+    '--muted':      '#9c8270',
+    '--border':     '#d0c0ae',
+    '--bubble-user':'#f5ede2',
+    '--bubble-ai':  '#f5ede2',
+    '--bubble-user-border': '#c8b49a',
+    '--bubble-ai-border':   '#d4c0a8',
+    '--input-bg':   '#f0e6d8',
+    '--input-border':'rgba(120,80,40,0.2)',
+    '--input-border-focus':'rgba(120,80,40,0.45)',
+    '--input-color': '#2e1f0e',
+    '--header-bg':  '#ddd0c0',
+    '--code-bg':    '#ede0ce',
+    '--code-header-bg': '#e0d0bc',
+    '--hint-color': '#b09a82',
+    '--send-bg':    '#7a4e28',
+    '--send-color': '#f5ede2',
+    '--btn-bg':     '#d8c8b4',
+    '--btn-hover':  '#cebfa8',
+    '--btn-border': '#bfad98',
+    '--btn-moon':   '#7a4e28',
+    '--sidebar-bg': '#ddd0c0',
+    '--sidebar-border': '#c8b89e',
+    '--sidebar-item-hover': '#cfc0ac',
+    '--sidebar-label': '#a08868',
+    '--sidebar-footer': '#b8a48c',
+    '--logo-bg':    '#7a4e28',
+    '--logo-stroke':'#f5ede2',
   },
 ];
 
 let currentTheme = 0;
+
+// Swatch colours (bg of each theme)
+const SWATCHES = ['#212121','#f5f5f0','#0d1117','#1a1f1a','#1c1510','#e8ddd0'];
+
+function buildThemeList() {
+  const list = document.getElementById('theme-list');
+  THEMES.forEach((t, i) => {
+    const opt = document.createElement('div');
+    opt.className = 'theme-option' + (i === 0 ? ' active' : '');
+    opt.dataset.index = i;
+
+    const swatch = document.createElement('div');
+    swatch.className = 'theme-swatch';
+    swatch.style.background = SWATCHES[i];
+
+    opt.appendChild(swatch);
+    opt.appendChild(document.createTextNode(t.name));
+    opt.addEventListener('click', () => selectTheme(i));
+    list.appendChild(opt);
+  });
+}
+
+function selectTheme(i) {
+  currentTheme = i;
+  applyTheme(THEMES[i]);
+  document.querySelectorAll('.theme-option').forEach((el, j) => {
+    el.classList.toggle('active', j === i);
+    el.querySelector('.theme-swatch').style.background = SWATCHES[j];
+  });
+}
 
 function applyTheme(t) {
   const root = document.documentElement;
   Object.entries(t).forEach(([k, v]) => {
     if (k !== 'name') root.style.setProperty(k, v);
   });
-  // update hardcoded bg-dependent elements
   document.body.style.background = t['--bg'];
   document.querySelector('header').style.background = t['--header-bg'];
-  document.querySelector('#theme-btn').title = 'Theme: ' + t.name;
+  document.getElementById('theme-sidebar').style.background = t['--sidebar-bg'];
 }
 
-document.getElementById('theme-btn').addEventListener('click', () => {
-  currentTheme = (currentTheme + 1) % THEMES.length;
-  applyTheme(THEMES[currentTheme]);
-});
+function openThemeSidebar() {
+  document.getElementById('theme-sidebar').classList.add('open');
+  document.getElementById('theme-overlay').classList.add('open');
+}
+
+function closeThemeSidebar() {
+  document.getElementById('theme-sidebar').classList.remove('open');
+  document.getElementById('theme-overlay').classList.remove('open');
+}
+
+document.getElementById('theme-btn').addEventListener('click', openThemeSidebar);
+
+buildThemeList();
 
 function openSidebar() {
   document.getElementById('sidebar').classList.add('open');
@@ -1041,7 +1157,7 @@ function closeSidebar() {
 }
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeSidebar();
+  if (e.key === 'Escape') { closeSidebar(); closeThemeSidebar(); }
 });
 </script>
 
