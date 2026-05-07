@@ -1,5 +1,4 @@
 export default async function handler(req, res) {
-  // ALWAYS return JSON no matter what
   const send = (status, obj) => {
     res.status(status);
     res.setHeader("Content-Type", "application/json");
@@ -10,16 +9,40 @@ export default async function handler(req, res) {
     return send(405, { error: "Method not allowed" });
   }
 
+  async function callGemini(apiKey, messages) {
+    const prompt = messages.map(m => `${m.role}: ${m.content}`).join("\n");
+
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  }
+
   try {
-    const keys = [
+    const groqKeys = [
       process.env.GROQ_API_KEY_1,
       process.env.GROQ_API_KEY_2,
       process.env.GROQ_API_KEY_3,
       process.env.GROQ_API_KEY_4,
-      process.env.GROQ_API_KEY_5,
+      process.env.GROQ_API_KEY_5
     ].filter(Boolean);
 
-    if (!keys.length) {
+    const geminiKeys = [
+      process.env.GEMINI_API_KEY_1,
+      process.env.GEMINI_API_KEY_2
+    ].filter(Boolean);
+
+    if (!groqKeys.length && !geminiKeys.length) {
       return send(500, { error: "No API keys configured" });
     }
 
@@ -28,27 +51,25 @@ export default async function handler(req, res) {
       req.socket?.remoteAddress ||
       "unknown";
 
-    // ---------------- GLOBAL STATE ----------------
-    if (!globalThis.__groqState) {
-      globalThis.__groqState = {
+    if (!globalThis.__state) {
+      globalThis.__state = {
         ipMap: new Map(),
         keyCooldown: new Map(),
         activeRequests: 0,
-        keyIndex: 0,
+        keyIndex: 0
       };
     }
 
-    const state = globalThis.__groqState;
+    const state = globalThis.__state;
     const now = Date.now();
 
-    // ---------------- IP RATE LIMIT ----------------
     const last = state.ipMap.get(ip) || 0;
     if (now - last < 2000) {
       return send(429, { error: "Slow down a bit" });
     }
+
     state.ipMap.set(ip, now);
 
-    // ---------------- CONCURRENCY LIMIT ----------------
     const MAX = 6;
     if (state.activeRequests >= MAX) {
       return send(429, { error: "Server busy — try again" });
@@ -56,7 +77,6 @@ export default async function handler(req, res) {
 
     state.activeRequests++;
 
-    // ---------------- REQUEST BODY ----------------
     const body = req.body || {};
     const history = Array.isArray(body.history) ? body.history : [];
     const system = body.system || "";
@@ -66,34 +86,6 @@ export default async function handler(req, res) {
       return send(400, { error: "Empty conversation" });
     }
 
-    // ---------------- PICK API KEY ----------------
-    const keysList = keys;
-
-    let apiKey = null;
-    let attempts = 0;
-
-    while (attempts < keysList.length) {
-      const key = keysList[state.keyIndex % keysList.length];
-      state.keyIndex++;
-
-      const cooldown = state.keyCooldown.get(key) || 0;
-
-      if (now > cooldown) {
-        apiKey = key;
-        break;
-      }
-
-      attempts++;
-    }
-
-    if (!apiKey) {
-      state.activeRequests--;
-      return send(429, {
-        error: "All API keys rate-limited — wait"
-      });
-    }
-
-    // ---------------- BUILD MESSAGES ----------------
     const messages = [
       {
         role: "system",
@@ -108,73 +100,81 @@ export default async function handler(req, res) {
       }))
     ];
 
-    // ---------------- CALL GROQ ----------------
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
-          messages,
-          max_tokens: 1200,
-          temperature: 0.7
-        })
+    const useGemini = Math.random() < 0.3;
+
+    const groqPool = groqKeys;
+    const geminiPool = geminiKeys;
+
+    let provider = null;
+    let apiKey = null;
+    let attempts = 0;
+
+    const pool = useGemini ? geminiPool : groqPool;
+
+    while (attempts < pool.length) {
+      const key = pool[state.keyIndex % pool.length];
+      state.keyIndex++;
+
+      const cooldown = state.keyCooldown.get(key) || 0;
+
+      if (now > cooldown) {
+        apiKey = key;
+        provider = useGemini ? "gemini" : "groq";
+        break;
       }
-    );
 
-    let data;
-
-    try {
-      data = await response.json();
-    } catch (e) {
-      const text = await response.text();
-      state.activeRequests--;
-
-      console.error("Non-JSON Groq response:", text);
-
-      return send(500, {
-        error: "Bad response from Groq",
-        raw: text.slice(0, 300)
-      });
+      attempts++;
     }
 
-    // ---------------- HANDLE 429 ----------------
-    if (response.status === 429) {
-      state.keyCooldown.set(apiKey, now + 5000);
+    if (!apiKey) {
+      state.activeRequests--;
+      return send(429, { error: "All API keys rate-limited — wait" });
+    }
+
+    let reply;
+
+    if (provider === "groq") {
+      const response = await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model: "llama-3.1-8b-instant",
+            messages,
+            max_tokens: 1200,
+            temperature: 0.7
+          })
+        }
+      );
+
+      const data = await response.json();
+      reply = data?.choices?.[0]?.message?.content;
+
+      if (response.status === 429) {
+        state.keyCooldown.set(apiKey, now + 5000);
+      }
+    }
+
+    if (provider === "gemini") {
+      reply = await callGemini(apiKey, messages);
     }
 
     state.activeRequests--;
 
-    if (!response.ok) {
-      return send(response.status, {
-        error: data?.error?.message || "Groq API error"
-      });
-    }
-
-    const reply = data?.choices?.[0]?.message?.content;
-
-    if (!reply) {
-      console.error("Empty reply:", data);
-      return send(500, {
-        error: "Empty model response"
-      });
+    if (!reply || reply.trim().length === 0) {
+      return send(500, { error: "Empty model response" });
     }
 
     return send(200, { reply });
-
   } catch (err) {
-    if (globalThis.__groqState) {
-      globalThis.__groqState.activeRequests--;
+    if (globalThis.__state) {
+      globalThis.__state.activeRequests--;
     }
 
-    console.error(err);
-
-    return send(500, {
-      error: "Server error: " + err.message
-    });
+    return send(500, { error: "Server error: " + err.message });
   }
 }
