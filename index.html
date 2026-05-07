@@ -1241,6 +1241,7 @@ function buildThemeList() {
 function selectTheme(i) {
   currentTheme = i;
   applyTheme(THEMES[i]);
+  localStorage.setItem('nb_theme', i);
   document.querySelectorAll('.theme-option').forEach((el, j) => {
     el.classList.toggle('active', j === i);
     el.querySelector('.theme-swatch').style.background = SWATCHES[j];
@@ -1270,6 +1271,11 @@ function closeThemeSidebar() {
 document.getElementById('theme-btn').addEventListener('click', openThemeSidebar);
 
 buildThemeList();
+
+// restore saved theme
+const savedTheme = parseInt(localStorage.getItem('nb_theme') || '0', 10);
+if (savedTheme !== 0) selectTheme(savedTheme);
+else selectTheme(0);
 
 function openSidebar() {
   document.getElementById('sidebar').classList.add('open');
