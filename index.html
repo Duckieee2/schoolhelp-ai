@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>NoteBuddy</title>
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
 
-  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/prismjs/themes/prism-tomorrow.css" rel="stylesheet"/>
 
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/prismjs/components/prism-core.min.js"></script>
@@ -20,7 +20,9 @@
   </script>
 
   <style>
-    *, *::before, *::after {
+    *,
+    *::before,
+    *::after {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
@@ -28,20 +30,20 @@
 
     :root {
       --accent: #ffffff;
-      --accent-dim: rgba(200,240,96,0.1);
-      --text: #e8eaf0;
-      --muted: #555;
+      --accent-dim: rgba(255,255,255,0.08);
+      --text: #ececf1;
+      --muted: #777;
       --border: #1a1a1a;
       --radius: 14px;
+
       --font-display: 'Syne', sans-serif;
       --font-mono: 'DM Mono', monospace;
     }
 
     body {
       background: #212121;
-      color: #ececf1;
+      color: var(--text);
       font-family: var(--font-mono);
-      font-size: 14px;
       height: 100dvh;
       display: flex;
       flex-direction: column;
@@ -59,7 +61,7 @@
     .logo-mark {
       width: 30px;
       height: 30px;
-      background: var(--accent);
+      background: #fff;
       border-radius: 8px;
       display: flex;
       align-items: center;
@@ -77,19 +79,50 @@
       font-size: 16px;
       font-weight: 700;
       letter-spacing: -0.02em;
-      color: var(--text);
     }
 
     .header-tag {
       margin-left: auto;
       font-size: 10px;
-      color: var(--accent);
-      background: var(--accent-dim);
-      border: 1px solid rgba(200,240,96,0.2);
-      border-radius: 20px;
-      padding: 3px 10px;
+      color: #fff;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      padding: 4px 10px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
+    }
+
+    #theme-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #2a2a2a;
+      background: #111;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: 0.18s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #theme-btn:hover {
+      background: #1b1b1b;
+      transform: scale(1.06);
+    }
+
+    #theme-btn::before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      background: #fff;
+      border-radius: 50%;
+      position: absolute;
+      left: 9px;
+      top: 9px;
+      box-shadow: -5px 0 0 2px #111;
     }
 
     #chat-window {
@@ -99,8 +132,14 @@
       scroll-behavior: smooth;
     }
 
-    #chat-window::-webkit-scrollbar { width: 3px; }
-    #chat-window::-webkit-scrollbar-thumb { background: #1f1f1f; border-radius: 2px; }
+    #chat-window::-webkit-scrollbar {
+      width: 3px;
+    }
+
+    #chat-window::-webkit-scrollbar-thumb {
+      background: #1f1f1f;
+      border-radius: 2px;
+    }
 
     .messages-inner {
       max-width: 700px;
@@ -125,10 +164,12 @@
       font-family: var(--font-display);
       font-size: 24px;
       font-weight: 700;
-      letter-spacing: -0.02em;
     }
 
-    .empty-state p { color: var(--muted); font-size: 13px; }
+    .empty-state p {
+      color: var(--muted);
+      font-size: 13px;
+    }
 
     .msg-row {
       display: flex;
@@ -137,13 +178,15 @@
       margin-bottom: 2px;
     }
 
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
+    .msg-row.user {
+      align-items: flex-end;
+      margin-top: 14px;
     }
 
-    .msg-row.user { align-items: flex-end; margin-top: 14px; }
-    .msg-row.ai { align-items: flex-start; margin-top: 4px; }
+    .msg-row.ai {
+      align-items: flex-start;
+      margin-top: 4px;
+    }
 
     .msg-label {
       font-size: 10px;
@@ -154,7 +197,9 @@
       padding: 0 2px;
     }
 
-    .msg-label.user-label { color: rgba(200,240,96,0.4); }
+    .msg-label.user-label {
+      color: rgba(255,255,255,0.4);
+    }
 
     .bubble {
       max-width: 88%;
@@ -174,10 +219,6 @@
       background: #0d0d0d;
       border: 1px solid #1f1f1f;
       border-radius: 14px;
-      padding: 11px 15px;
-      line-height: 1.8;
-      font-size: 13.5px;
-      max-width: 88%;
     }
 
     .bubble.ai pre {
@@ -194,19 +235,34 @@
       font-size: 12.5px;
     }
 
-    .bubble.thinking { color: var(--muted); font-style: italic; }
+    .bubble.thinking {
+      color: var(--muted);
+      font-style: italic;
+    }
 
     .thinking-dots span {
       display: inline-block;
       animation: blink 1.2s infinite;
-      color: var(--accent);
     }
-    .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    .thinking-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .thinking-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
 
     .code-block {
       position: relative;
       margin-top: 10px;
+    }
+
+    .ai-warning {
+      margin-top: 8px;
+      font-size: 10px;
+      opacity: 0.45;
+      line-height: 1.4;
     }
 
     .code-header {
@@ -223,24 +279,37 @@
       color: #888;
     }
 
-    .code-lang { text-transform: uppercase; letter-spacing: 0.06em; }
-
     .copy-btn {
       background: none;
       border: none;
       color: #aaa;
       cursor: pointer;
       font-size: 11px;
-      transition: color 0.2s;
     }
 
-    .copy-btn:hover { color: var(--accent); }
+    .copy-btn:hover {
+      color: #fff;
+    }
 
-    .bubble.ai pre { margin: 0; border-radius: 0 0 10px 10px; }
+    .bubble.ai pre {
+      margin: 0;
+      border-radius: 0 0 10px 10px;
+    }
 
     @keyframes blink {
-      0%, 80%, 100% { opacity: 0.2; }
+      0%,80%,100% { opacity: 0.2; }
       40% { opacity: 1; }
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .input-area {
@@ -261,7 +330,9 @@
       transition: border-color 0.2s;
     }
 
-    .input-wrap:focus-within { border-color: rgba(200,240,96,0.35); }
+    .input-wrap:focus-within {
+      border-color: rgba(255,255,255,0.25);
+    }
 
     #user-input {
       flex: 1;
@@ -277,26 +348,33 @@
       min-height: 24px;
     }
 
-    #user-input::placeholder { color: #888; }
+    #user-input::placeholder {
+      color: #888;
+    }
 
     #send-btn {
       flex-shrink: 0;
       width: 34px;
       height: 34px;
-      background: var(--accent);
+      background: #fff;
       border: none;
       border-radius: 9px;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.15s;
+      transition: 0.15s;
     }
 
-    #send-btn:hover { background: #d4d4d4; transform: scale(1.05); }
-    #send-btn:active { transform: scale(0.97); }
-    #send-btn:disabled { background: #1a1a1a; cursor: not-allowed; transform: none; }
-    #send-btn svg { width: 15px; height: 15px; color: #000; }
+    #send-btn:hover {
+      transform: scale(1.05);
+    }
+
+    #send-btn svg {
+      width: 15px;
+      height: 15px;
+      color: #000;
+    }
 
     .input-hint {
       max-width: 700px;
@@ -318,34 +396,51 @@
       <path d="M2 12l10 5 10-5"/>
     </svg>
   </div>
+
   <h1>NoteBuddy</h1>
+
   <span class="header-tag">Free</span>
+
+  <button id="theme-btn" aria-label="Themes"></button>
 </header>
 
 <div id="chat-window">
   <div class="messages-inner" id="messages">
+
     <div class="empty-state" id="empty-state">
       <h2>NoteBuddy</h2>
       <p>Ask me any question</p>
     </div>
+
   </div>
 </div>
 
 <div class="input-area">
   <div class="input-wrap">
-    <textarea id="user-input" placeholder="Ask me any question" rows="1"></textarea>
+
+    <textarea
+      id="user-input"
+      placeholder="Ask me any question"
+      rows="1"
+    ></textarea>
+
     <button id="send-btn" onclick="sendMessage()" aria-label="Send">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <line x1="22" y1="2" x2="11" y2="13"/>
         <polygon points="22 2 15 22 11 13 2 9 22 2"/>
       </svg>
     </button>
+
   </div>
-  <p class="input-hint">Enter to send · Shift+Enter for new line</p>
+
+  <p class="input-hint">
+    Enter to send · Shift+Enter for new line
+  </p>
 </div>
 
 <script>
-const SYSTEM_PROMPT = 'You are NoteBuddy, a school assistant. Rules: - Be factual and do not invent personal traits about real people. - If a user asks about a person, only describe known factual information. - Use Markdown for structure (headings, lists, links) when helpful. - Use code blocks only for code. - Keep responses clear, structured, and not overly long. Linking: - Use Markdown links like [text](url) If you are unsure about a topic: - Say you are not certain instead of guessing.' ;
+const SYSTEM_PROMPT =
+'You are NoteBuddy, a school assistant.';
 
 const history = [];
 let isLoading = false;
@@ -357,7 +452,8 @@ const chatWindow = document.getElementById('chat-window');
 
 inputEl.addEventListener('input', () => {
   inputEl.style.height = 'auto';
-  inputEl.style.height = Math.min(inputEl.scrollHeight, 140) + 'px';
+  inputEl.style.height =
+    Math.min(inputEl.scrollHeight, 140) + 'px';
 });
 
 inputEl.addEventListener('keydown', (e) => {
@@ -369,18 +465,30 @@ inputEl.addEventListener('keydown', (e) => {
 
 function formatMessage(text) {
   let html = marked.parse(text);
+
   html = html.replace(
     /<pre><code class="language-(.*?)">([\s\S]*?)<\/code><\/pre>/g,
     (match, lang, code) => {
-      return `<div class="code-block">
-        <div class="code-header">
-          <span class="code-lang">${lang || 'text'}</span>
-          <button class="copy-btn" onclick="copyCode(this)">📋 copy</button>
+      return `
+        <div class="code-block">
+          <div class="code-header">
+            <span>${lang || 'text'}</span>
+            <button class="copy-btn"
+              onclick="copyCode(this)">
+              📋 copy
+            </button>
+          </div>
+
+          <pre>
+<code class="language-${lang}">
+${code}
+</code>
+          </pre>
         </div>
-        <pre><code class="language-${lang}">${code}</code></pre>
-      </div>`;
+      `;
     }
   );
+
   return html;
 }
 
@@ -392,56 +500,90 @@ function addMessage(role, text, isThinking = false) {
   row.className = `msg-row ${role}`;
 
   const label = document.createElement('div');
-  label.className = `msg-label ${role === 'user' ? 'user-label' : ''}`;
-  label.textContent = role === 'user' ? 'You' : 'NoteBuddy';
+  label.className =
+    `msg-label ${role === 'user' ? 'user-label' : ''}`;
+
+  label.textContent =
+    role === 'user' ? 'You' : 'NoteBuddy';
 
   const bubble = document.createElement('div');
-  bubble.className = `bubble ${role}${isThinking ? ' thinking' : ''}`;
+
+  bubble.className =
+    `bubble ${role}${isThinking ? ' thinking' : ''}`;
 
   if (isThinking) {
-    bubble.innerHTML = 'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
+    bubble.innerHTML =
+      'Thinking <span class="thinking-dots"><span>.</span><span>.</span><span>.</span></span>';
   } else {
-    bubble.innerHTML = formatMessage(text);
+    bubble.innerHTML = `
+      ${formatMessage(text)}
+      <div class="ai-warning">
+        This message is AI-generated and may contain incorrect information
+      </div>
+    `;
+
     requestAnimationFrame(() => {
-      bubble.querySelectorAll('pre code').forEach(block => Prism.highlightElement(block));
+      bubble.querySelectorAll('pre code')
+        .forEach(block => {
+          Prism.highlightElement(block);
+        });
     });
   }
 
   row.appendChild(label);
   row.appendChild(bubble);
+
   messagesEl.appendChild(row);
+
   chatWindow.scrollTop = chatWindow.scrollHeight;
+
   return bubble;
 }
 
 async function sendMessage() {
   const text = inputEl.value.trim();
+
   if (!text || isLoading) return;
 
   isLoading = true;
   sendBtn.disabled = true;
+
   inputEl.value = '';
   inputEl.style.height = 'auto';
 
   addMessage('user', text);
-  history.push({ role: 'user', parts: [{ text }] });
+
+  history.push({
+    role: 'user',
+    parts: [{ text }]
+  });
 
   const bubble = addMessage('ai', '', true);
 
   try {
     const response = await fetch('/api/chat', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ history, system: SYSTEM_PROMPT })
+      headers: {
+        'Content-Type': 'application/json'
+      },
+
+      body: JSON.stringify({
+        history,
+        system: SYSTEM_PROMPT
+      })
     });
 
     const data = await response.json();
+
     const reply = data.reply || 'No response.';
 
     bubble.classList.remove('thinking');
     bubble.innerHTML = '';
 
-    history.push({ role: 'model', parts: [{ text: reply }] });
+    history.push({
+      role: 'model',
+      parts: [{ text: reply }]
+    });
 
     let i = 0;
     let buffer = '';
@@ -449,22 +591,45 @@ async function sendMessage() {
 
     function type() {
       const now = performance.now();
-      if (now - last < 8) { requestAnimationFrame(type); return; }
+
+      if (now - last < 8) {
+        requestAnimationFrame(type);
+        return;
+      }
+
       last = now;
 
       if (i < reply.length) {
         buffer += reply[i];
+
         bubble.innerHTML = buffer;
+
         i++;
-        chatWindow.scrollTop = chatWindow.scrollHeight;
+
+        chatWindow.scrollTop =
+          chatWindow.scrollHeight;
+
         requestAnimationFrame(type);
+
       } else {
-        bubble.innerHTML = formatMessage(buffer);
+
+          bubble.innerHTML = `
+            ${formatMessage(buffer)}
+            <div class="ai-warning">
+              This message is AI-generated and may contain incorrect information
+            </div>
+          `;
+
         requestAnimationFrame(() => {
-          bubble.querySelectorAll('pre code').forEach(block => Prism.highlightElement(block));
+          bubble.querySelectorAll('pre code')
+            .forEach(block => {
+              Prism.highlightElement(block);
+            });
         });
+
         isLoading = false;
         sendBtn.disabled = false;
+
         inputEl.focus();
       }
     }
@@ -472,20 +637,35 @@ async function sendMessage() {
     type();
 
   } catch (err) {
+
     bubble.classList.remove('thinking');
+
     bubble.style.color = '#f87171';
-    bubble.textContent = 'Error: ' + err.message;
+
+    bubble.textContent =
+      'Error: ' + err.message;
+
     isLoading = false;
     sendBtn.disabled = false;
   }
 }
 
 function copyCode(button) {
-  const code = button.closest('.code-block').querySelector('code').innerText;
-  navigator.clipboard.writeText(code).then(() => {
-    button.textContent = '✓ copied';
-    setTimeout(() => button.textContent = '📋 copy', 2000);
-  });
+  const code =
+    button.closest('.code-block')
+      .querySelector('code')
+      .innerText;
+
+  navigator.clipboard.writeText(code)
+    .then(() => {
+
+      button.textContent = '✓ copied';
+
+      setTimeout(() => {
+        button.textContent = '📋 copy';
+      }, 2000);
+
+    });
 }
 </script>
 
