@@ -1,13 +1,14 @@
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const extractText = (msg) => {
-    if (typeof msg?.content === "string") return msg.content;
-    if (Array.isArray(msg?.parts)) return msg.parts[0]?.text || "";
-    return "";
+  // ALWAYS return JSON no matter what
+  const send = (status, obj) => {
+    res.status(status);
+    res.setHeader("Content-Type", "application/json");
+    return res.end(JSON.stringify(obj));
   };
+
+  if (req.method !== "POST") {
+    return send(405, { error: "Method not allowed" });
+  }
 
   try {
     const keys = [
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
     ].filter(Boolean);
 
     if (!keys.length) {
-      return res.status(500).json({ error: 'No API keys configured' });
+      return send(500, { error: "No API keys configured" });
     }
 
     const ip =
@@ -42,56 +43,37 @@ export default async function handler(req, res) {
 
     // ---------------- IP RATE LIMIT ----------------
     const last = state.ipMap.get(ip) || 0;
-    const minGap = 2000; // 2 sec per user
-
-    if (now - last < minGap) {
-      return res.status(429).json({ error: "Slow down a bit" });
+    if (now - last < 2000) {
+      return send(429, { error: "Slow down a bit" });
     }
-
     state.ipMap.set(ip, now);
 
-    // ---------------- GLOBAL CONCURRENCY LIMIT ----------------
-    const MAX_CONCURRENT = 6;
-
-    if (state.activeRequests >= MAX_CONCURRENT) {
-      return res.status(429).json({
-        error: "Server busy — try again in a moment"
-      });
+    // ---------------- CONCURRENCY LIMIT ----------------
+    const MAX = 6;
+    if (state.activeRequests >= MAX) {
+      return send(429, { error: "Server busy — try again" });
     }
 
     state.activeRequests++;
 
-    // ---------------- INPUT ----------------
+    // ---------------- REQUEST BODY ----------------
     const body = req.body || {};
     const history = Array.isArray(body.history) ? body.history : [];
-    const system = body.system || '';
+    const system = body.system || "";
 
     if (!history.length) {
       state.activeRequests--;
-      return res.status(400).json({ error: 'Empty conversation' });
+      return send(400, { error: "Empty conversation" });
     }
 
-    if (history.length > 60) {
-      state.activeRequests--;
-      return res.status(429).json({
-        error: 'Conversation too long — refresh'
-      });
-    }
-
-    // ---------------- KEY ROTATION (SMART) ----------------
-    const keys = [
-      process.env.GROQ_API_KEY_1,
-      process.env.GROQ_API_KEY_2,
-      process.env.GROQ_API_KEY_3,
-      process.env.GROQ_API_KEY_4,
-      process.env.GROQ_API_KEY_5,
-    ].filter(Boolean);
+    // ---------------- PICK API KEY ----------------
+    const keysList = keys;
 
     let apiKey = null;
     let attempts = 0;
 
-    while (attempts < keys.length) {
-      const key = keys[state.keyIndex % keys.length];
+    while (attempts < keysList.length) {
+      const key = keysList[state.keyIndex % keysList.length];
       state.keyIndex++;
 
       const cooldown = state.keyCooldown.get(key) || 0;
@@ -106,34 +88,37 @@ export default async function handler(req, res) {
 
     if (!apiKey) {
       state.activeRequests--;
-      return res.status(429).json({
-        error: "All API keys are rate-limited — wait a few seconds"
+      return send(429, {
+        error: "All API keys rate-limited — wait"
       });
     }
 
     // ---------------- BUILD MESSAGES ----------------
     const messages = [
       {
-        role: 'system',
-        content: system || 'You are a helpful school assistant.'
+        role: "system",
+        content: system || "You are a helpful school assistant."
       },
-      ...history.slice(-8).map(msg => ({
-        role: msg.role === 'model' ? 'assistant' : 'user',
-        content: extractText(msg).trim()
+      ...history.slice(-8).map(m => ({
+        role: m.role === "model" ? "assistant" : "user",
+        content:
+          typeof m?.content === "string"
+            ? m.content
+            : m?.parts?.[0]?.text || ""
       }))
     ];
 
     // ---------------- CALL GROQ ----------------
     const response = await fetch(
-      'https://api.groq.com/openai/v1/chat/completions',
+      "https://api.groq.com/openai/v1/chat/completions",
       {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
+          model: "llama-3.1-8b-instant",
           messages,
           max_tokens: 1200,
           temperature: 0.7
@@ -141,35 +126,45 @@ export default async function handler(req, res) {
       }
     );
 
-    const data = await response.json();
+    let data;
 
-    // ---------------- HANDLE GROQ RATE LIMIT ----------------
+    try {
+      data = await response.json();
+    } catch (e) {
+      const text = await response.text();
+      state.activeRequests--;
+
+      console.error("Non-JSON Groq response:", text);
+
+      return send(500, {
+        error: "Bad response from Groq",
+        raw: text.slice(0, 300)
+      });
+    }
+
+    // ---------------- HANDLE 429 ----------------
     if (response.status === 429) {
       state.keyCooldown.set(apiKey, now + 5000);
     }
 
     state.activeRequests--;
 
-    // ---------------- HARD ERROR HANDLING ----------------
     if (!response.ok) {
-      console.error("Groq error:", data);
-      return res.status(response.status).json({
-        error: data?.error?.message || 'Groq API error',
-        debug: data
+      return send(response.status, {
+        error: data?.error?.message || "Groq API error"
       });
     }
 
     const reply = data?.choices?.[0]?.message?.content;
 
     if (!reply) {
-      console.error("Empty Groq response:", data);
-      return res.status(500).json({
-        error: "Model returned empty response",
-        debug: data
+      console.error("Empty reply:", data);
+      return send(500, {
+        error: "Empty model response"
       });
     }
 
-    return res.status(200).json({ reply });
+    return send(200, { reply });
 
   } catch (err) {
     if (globalThis.__groqState) {
@@ -178,8 +173,8 @@ export default async function handler(req, res) {
 
     console.error(err);
 
-    return res.status(500).json({
-      error: 'Server error: ' + err.message
+    return send(500, {
+      error: "Server error: " + err.message
     });
   }
 }
