@@ -296,6 +296,64 @@
       opacity: 1;
     }
 
+    .history-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 20px;
+      font-size: 12.5px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border-left: 2px solid transparent;
+    }
+
+    .history-item:hover {
+      background: var(--sidebar-item-hover, #222);
+      color: var(--text);
+    }
+
+    .history-item.active {
+      border-left-color: var(--text);
+      color: var(--text);
+    }
+
+    .history-item-text {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .history-delete {
+      flex-shrink: 0;
+      opacity: 0;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      border-radius: 4px;
+      transition: opacity 0.15s, color 0.15s;
+      line-height: 1;
+    }
+
+    .history-item:hover .history-delete {
+      opacity: 1;
+    }
+
+    .history-delete:hover {
+      color: #f87171;
+    }
+
+    .history-empty {
+      padding: 10px 20px;
+      font-size: 12px;
+      color: var(--sidebar-label, #555);
+      font-style: italic;
+    }
+
     .sidebar-divider {
       height: 1px;
       background: var(--border);
@@ -593,34 +651,15 @@
 
   <div class="sidebar-section-label">Menu</div>
 
-  <div class="sidebar-item">
+  <div class="sidebar-item" id="new-chat-btn">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     New Chat
-  </div>
-  <div class="sidebar-item">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-    Search Chats
   </div>
 
   <div class="sidebar-divider"></div>
   <div class="sidebar-section-label">Recent</div>
 
-  <div class="sidebar-item">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-    History will appear here
-  </div>
-
-  <div class="sidebar-divider"></div>
-  <div class="sidebar-section-label">Settings</div>
-
-  <div class="sidebar-item">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-    Preferences
-  </div>
-  <div class="sidebar-item">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-    Account
-  </div>
+  <div id="chat-history-list"></div>
 
   <div class="sidebar-footer">NoteBuddy · School Assistant</div>
 </div>
@@ -677,13 +716,99 @@
 const SYSTEM_PROMPT =
 'You are NoteBuddy, a school assistant.';
 
-const history = [];
+let history = [];
 let isLoading = false;
+let currentChatId = null;
 
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('user-input');
 const sendBtn = document.getElementById('send-btn');
 const chatWindow = document.getElementById('chat-window');
+
+// ── LOCAL STORAGE HELPERS ──
+function getAllChats() {
+  try { return JSON.parse(localStorage.getItem('nb_chats') || '[]'); }
+  catch { return []; }
+}
+
+function saveAllChats(chats) {
+  localStorage.setItem('nb_chats', JSON.stringify(chats));
+}
+
+function saveCurrentChat() {
+  if (!currentChatId || history.length === 0) return;
+  const chats = getAllChats();
+  const idx = chats.findIndex(c => c.id === currentChatId);
+  const title = history[0]?.parts[0]?.text?.slice(0, 40) || 'Chat';
+  const entry = { id: currentChatId, title, history, ts: Date.now() };
+  if (idx >= 0) chats[idx] = entry;
+  else chats.unshift(entry);
+  saveAllChats(chats);
+  renderHistoryList();
+}
+
+function loadChat(id) {
+  const chats = getAllChats();
+  const chat = chats.find(c => c.id === id);
+  if (!chat) return;
+  currentChatId = id;
+  history = chat.history;
+
+  // clear UI
+  messagesEl.innerHTML = '';
+  history.forEach(msg => {
+    const role = msg.role === 'user' ? 'user' : 'ai';
+    addMessage(role, msg.parts[0].text);
+  });
+  renderHistoryList();
+  closeSidebar();
+}
+
+function deleteChat(id, e) {
+  e.stopPropagation();
+  const chats = getAllChats().filter(c => c.id !== id);
+  saveAllChats(chats);
+  if (currentChatId === id) startNewChat();
+  else renderHistoryList();
+}
+
+function startNewChat() {
+  currentChatId = 'chat_' + Date.now();
+  history = [];
+  messagesEl.innerHTML = `
+    <div class="empty-state" id="empty-state">
+      <h2>NoteBuddy</h2>
+      <p>Ask me any question</p>
+    </div>`;
+  renderHistoryList();
+  closeSidebar();
+  inputEl.focus();
+}
+
+function renderHistoryList() {
+  const list = document.getElementById('chat-history-list');
+  const chats = getAllChats();
+  if (chats.length === 0) {
+    list.innerHTML = '<div class="history-empty">No saved chats yet</div>';
+    return;
+  }
+  list.innerHTML = chats.map(c => `
+    <div class="history-item ${c.id === currentChatId ? 'active' : ''}" onclick="loadChat('${c.id}')">
+      <span class="history-item-text">${escHtml(c.title)}</span>
+      <button class="history-delete" onclick="deleteChat('${c.id}', event)" title="Delete">✕</button>
+    </div>
+  `).join('');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('new-chat-btn').addEventListener('click', startNewChat);
+
+// init
+currentChatId = 'chat_' + Date.now();
+renderHistoryList();
 
 inputEl.addEventListener('input', () => {
   inputEl.style.height = 'auto';
@@ -855,7 +980,7 @@ async function sendMessage() {
 
         isLoading = false;
         sendBtn.disabled = false;
-
+        saveCurrentChat();
         inputEl.focus();
       }
     }
