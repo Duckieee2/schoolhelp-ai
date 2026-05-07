@@ -12,10 +12,8 @@ export default async function handler(req, res) {
       process.env.GROQ_API_KEY_5,
     ].filter(Boolean);
 
-    if (keys.length === 0) {
-      return res.status(500).json({
-        error: 'No GROQ_API_KEY_* keys set in environment variables'
-      });
+    if (!keys.length) {
+      return res.status(500).json({ error: 'No API keys set' });
     }
 
     const ip =
@@ -23,100 +21,105 @@ export default async function handler(req, res) {
       req.socket?.remoteAddress ||
       "unknown";
 
-    if (!globalThis.__rateLimit) globalThis.__rateLimit = new Map();
-
-    const now = Date.now();
-    const last = globalThis.__rateLimit.get(ip) || 0;
-
-    if (now - last < 1500) {
-      return res.status(429).json({ error: "Slow down a bit" });
+    // -------------------------
+    // GLOBAL RATE LIMIT STATE
+    // -------------------------
+    if (!globalThis.__rl) {
+      globalThis.__rl = {
+        ipMap: new Map(),
+        keyCooldown: new Map(),
+        activeRequests: 0,
+      };
     }
 
-    globalThis.__rateLimit.set(ip, now);
+    const rl = globalThis.__rl;
+    const now = Date.now();
 
-    if (globalThis.__groqKeyIndex === undefined) globalThis.__groqKeyIndex = 0;
+    // -------------------------
+    // PER-IP RATE LIMIT (STRONGER)
+    // -------------------------
+    const last = rl.ipMap.get(ip) || 0;
+    const minGap = 2000; // 2s per request per IP
 
-    const apiKey = keys[globalThis.__groqKeyIndex];
-    globalThis.__groqKeyIndex =
-      (globalThis.__groqKeyIndex + 1) % keys.length;
+    if (now - last < minGap) {
+      return res.status(429).json({ error: "Slow down a bit" });
+    }
+    rl.ipMap.set(ip, now);
 
+    // -------------------------
+    // GLOBAL CONCURRENCY LIMIT
+    // -------------------------
+    const MAX_CONCURRENT = 6;
+
+    if (rl.activeRequests >= MAX_CONCURRENT) {
+      return res.status(429).json({
+        error: "Server busy — try again in a moment"
+      });
+    }
+
+    rl.activeRequests++;
+
+    // -------------------------
+    // KEY SELECTION (SMARTER)
+    // -------------------------
+    let apiKey = null;
+    let attempts = 0;
+
+    while (attempts < keys.length) {
+      const key = keys[globalThis.__groqKeyIndex % keys.length];
+      globalThis.__groqKeyIndex =
+        (globalThis.__groqKeyIndex + 1) % keys.length;
+
+      const cooldownUntil = rl.keyCooldown.get(key) || 0;
+
+      if (now > cooldownUntil) {
+        apiKey = key;
+        break;
+      }
+
+      attempts++;
+    }
+
+    if (!apiKey) {
+      rl.activeRequests--;
+      return res.status(429).json({
+        error: "All API keys rate-limited — wait a few seconds"
+      });
+    }
+
+    // -------------------------
+    // REQUEST BODY
+    // -------------------------
     const body = req.body || {};
     const history = Array.isArray(body.history) ? body.history : [];
     const system = body.system || '';
 
-    if (history.length === 0) {
+    if (!history.length) {
+      rl.activeRequests--;
       return res.status(400).json({ error: 'Invalid request' });
     }
 
     if (history.length > 60) {
+      rl.activeRequests--;
       return res.status(429).json({
-        error: 'Conversation too long — please refresh to start a new one.'
+        error: 'Conversation too long — refresh'
       });
     }
-
-    const lastUserMsg =
-      [...history]
-        .reverse()
-        .find(m => m?.role === 'user')?.parts?.[0]?.text || '';
-
-    const chatHistory = history.slice(-8);
-
-    const needsFreshData = (messages) => {
-      const text = JSON.stringify(messages).toLowerCase();
-      return (
-        text.includes("latest") ||
-        text.includes("update") ||
-        text.includes("version") ||
-        text.includes("current") ||
-        text.includes("2026") ||
-        text.includes("minecraft") ||
-        text.includes("news")
-      );
-    };
-
-    const getFreshContext = async (query) => {
-      if (!query) return null;
-
-      const q = query.toLowerCase();
-
-      if (q.includes("minecraft")) {
-        return "Minecraft uses a modern 2026+ version system. Avoid outdated 1.20.x info.";
-      }
-
-      return null;
-    };
 
     const messages = [
       {
         role: 'system',
         content: system || 'You are a helpful school assistant.'
-      }
+      },
+      ...history.slice(-8).map(msg => ({
+        role: msg.role === 'model' ? 'assistant' : 'user',
+        content: String(msg.parts?.[0]?.text ?? msg.content ?? '').trim()
+      }))
     ];
 
-    if (needsFreshData(chatHistory)) {
-      const fresh = await getFreshContext(lastUserMsg);
-
-      if (fresh) {
-        messages.push({
-          role: 'system',
-          content: `UP-TO-DATE CONTEXT: ${fresh}`
-        });
-      }
-    }
-
-    const cleanHistory = chatHistory
-      .filter(msg => msg?.parts?.[0]?.text || msg?.content)
-      .slice(-8);
-
-    messages.push(
-      ...cleanHistory.map(msg => ({
-        role: msg.role === 'model' ? 'assistant' : 'user',
-        content: String(
-          msg.parts?.[0]?.text ?? msg.content ?? ''
-        ).trim()
-      }))
-    );
-
+    // -------------------------
+    // CALL GROQ
+    // -------------------------
     const response = await fetch(
       'https://api.groq.com/openai/v1/chat/completions',
       {
@@ -128,19 +131,22 @@ export default async function handler(req, res) {
         body: JSON.stringify({
           model: 'llama-3.1-8b-instant',
           messages,
-          max_tokens: 2000,
+          max_tokens: 1500,
           temperature: 0.7
         })
       }
     );
 
+    const data = await response.json();
+
+    // -------------------------
+    // HANDLE RATE LIMIT FROM GROQ
+    // -------------------------
     if (response.status === 429) {
-      return res.status(429).json({
-        error: 'Too busy right now — try again in a few seconds.'
-      });
+      rl.keyCooldown.set(apiKey, now + 5000); // 5s cooldown per key
     }
 
-    const data = await response.json();
+    rl.activeRequests--;
 
     if (!response.ok) {
       return res.status(response.status).json({
@@ -148,13 +154,12 @@ export default async function handler(req, res) {
       });
     }
 
-    const reply =
-      data?.choices?.[0]?.message?.content || 'No response.';
-
-    return res.status(200).json({ reply });
+    return res.status(200).json({
+      reply: data?.choices?.[0]?.message?.content || 'No response.'
+    });
 
   } catch (err) {
-    console.error(err);
+    if (globalThis.__rl) globalThis.__rl.activeRequests--;
     return res.status(500).json({
       error: 'Server crashed: ' + err.message
     });
