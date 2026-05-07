@@ -9,6 +9,9 @@ export default async function handler(req, res) {
     return send(405, { error: "Method not allowed" });
   }
 
+  // -----------------------------
+  // GEMINI CALL
+  // -----------------------------
   async function callGemini(apiKey, messages) {
     const prompt = messages.map(m => `${m.role}: ${m.content}`).join("\n");
 
@@ -24,8 +27,42 @@ export default async function handler(req, res) {
     );
 
     const data = await res.json();
-
     return data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  }
+
+  // -----------------------------
+  // WEB SEARCH (LIVE KNOWLEDGE)
+  // -----------------------------
+  async function searchWeb(query) {
+    const res = await fetch(
+      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_API_KEY}`
+    );
+
+    const data = await res.json();
+
+    const results = data?.organic_results || [];
+
+    return results.slice(0, 5).map(r =>
+      `TITLE: ${r.title}\nSNIPPET: ${r.snippet}\nLINK: ${r.link}`
+    ).join("\n\n");
+  }
+
+  // Decide when to use web
+  function shouldUseWeb(text) {
+    const t = (text || "").toLowerCase();
+
+    return [
+      "latest",
+      "news",
+      "today",
+      "now",
+      "update",
+      "current",
+      "price",
+      "who is",
+      "what is",
+      "2026"
+    ].some(k => t.includes(k));
   }
 
   try {
@@ -63,11 +100,11 @@ export default async function handler(req, res) {
     const state = globalThis.__state;
     const now = Date.now();
 
+    // IP rate limit
     const last = state.ipMap.get(ip) || 0;
     if (now - last < 2000) {
       return send(429, { error: "Slow down a bit" });
     }
-
     state.ipMap.set(ip, now);
 
     const MAX = 6;
@@ -86,10 +123,36 @@ export default async function handler(req, res) {
       return send(400, { error: "Empty conversation" });
     }
 
+    // -----------------------------
+    // GET LAST USER MESSAGE
+    // -----------------------------
+    const lastUserMessage =
+      history[history.length - 1]?.content || "";
+
+    // -----------------------------
+    // LIVE WEB CONTEXT
+    // -----------------------------
+    let webContext = "";
+
+    try {
+      if (shouldUseWeb(lastUserMessage)) {
+        webContext = await searchWeb(lastUserMessage);
+      }
+    } catch (e) {
+      webContext = "";
+    }
+
+    // -----------------------------
+    // FORMAT MESSAGES
+    // -----------------------------
     const messages = [
       {
         role: "system",
-        content: system || "You are a helpful school assistant."
+        content:
+          (system || "You are a helpful assistant.") +
+          (webContext
+            ? "\n\nUse this live web information if relevant:\n\n" + webContext
+            : "")
       },
       ...history.slice(-8).map(m => ({
         role: m.role === "model" ? "assistant" : "user",
@@ -100,39 +163,31 @@ export default async function handler(req, res) {
       }))
     ];
 
+    // -----------------------------
+    // MODEL SELECTION
+    // -----------------------------
     const useGemini = Math.random() < 0.3;
-
-    const groqPool = groqKeys;
-    const geminiPool = geminiKeys;
+    const pool = useGemini ? geminiKeys : groqKeys;
 
     let provider = null;
     let apiKey = null;
-    let attempts = 0;
 
-    const pool = useGemini ? geminiPool : groqPool;
+    const key = pool[state.keyIndex % pool.length];
+    state.keyIndex++;
 
-    while (attempts < pool.length) {
-      const key = pool[state.keyIndex % pool.length];
-      state.keyIndex++;
-
-      const cooldown = state.keyCooldown.get(key) || 0;
-
-      if (now > cooldown) {
-        apiKey = key;
-        provider = useGemini ? "gemini" : "groq";
-        break;
-      }
-
-      attempts++;
-    }
-
-    if (!apiKey) {
+    if (!key) {
       state.activeRequests--;
-      return send(429, { error: "All API keys rate-limited — wait" });
+      return send(429, { error: "No available API keys" });
     }
+
+    apiKey = key;
+    provider = useGemini ? "gemini" : "groq";
 
     let reply;
 
+    // -----------------------------
+    // GROQ
+    // -----------------------------
     if (provider === "groq") {
       const response = await fetch(
         "https://api.groq.com/openai/v1/chat/completions",
@@ -153,23 +208,23 @@ export default async function handler(req, res) {
 
       const data = await response.json();
       reply = data?.choices?.[0]?.message?.content;
-
-      if (response.status === 429) {
-        state.keyCooldown.set(apiKey, now + 5000);
-      }
     }
 
+    // -----------------------------
+    // GEMINI
+    // -----------------------------
     if (provider === "gemini") {
       reply = await callGemini(apiKey, messages);
     }
 
     state.activeRequests--;
 
-    if (!reply || reply.trim().length === 0) {
+    if (!reply || !reply.trim()) {
       return send(500, { error: "Empty model response" });
     }
 
     return send(200, { reply });
+
   } catch (err) {
     if (globalThis.__state) {
       globalThis.__state.activeRequests--;
