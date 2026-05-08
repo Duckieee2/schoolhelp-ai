@@ -32,23 +32,6 @@ export default async function handler(req, res) {
     return data?.choices?.[0]?.message?.content?.trim() || null;
   }
 
-  async function searchWeb(query) {
-    const r = await fetch(
-      `https://serpapi.com/search.json?q=${encodeURIComponent(query)}&api_key=${process.env.SERP_API_KEY}`
-    );
-    const data = await r.json();
-    return (data?.organic_results || [])
-      .slice(0, 5)
-      .map(r => `TITLE: ${r.title}\nSNIPPET: ${r.snippet}\nLINK: ${r.link}`)
-      .join("\n\n");
-  }
-
-  function shouldUseWeb(text) {
-    const t = (text || "").toLowerCase();
-    return ["latest","news","today","now","update","current","price","who is","what is","2026"]
-      .some(k => t.includes(k));
-  }
-
   try {
     const groqKeys = [1,2,3,4,5].map(i => process.env[`GROQ_API_KEY_${i}`]).filter(Boolean);
 
@@ -80,12 +63,8 @@ export default async function handler(req, res) {
 
     const lastUserText = msgText(history[history.length - 1]);
 
-    let webContext = "";
-    try {
-      if (shouldUseWeb(lastUserText)) webContext = await searchWeb(lastUserText);
-    } catch (_) {}
-
-    const fullSystem = system + (webContext ? "\n\nUse this live web info if relevant:\n\n" + webContext : "");
+    const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    const fullSystem = `${system}\n\nToday's date is ${today}. You do not have access to the internet or external sources — if asked, say so honestly.`;
 
     const messages = [
       { role: "system", content: fullSystem },
